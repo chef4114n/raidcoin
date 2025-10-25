@@ -3,7 +3,7 @@ import TwitterProvider from 'next-auth/providers/twitter'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import { prisma } from '@/lib/prisma'
 
-export default NextAuth({
+const handler = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers: [
     TwitterProvider({
@@ -45,3 +45,5 @@ export default NextAuth({
     error: '/auth/error',
   },
 })
+
+export { handler as GET, handler as POST }
