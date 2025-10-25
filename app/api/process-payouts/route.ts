@@ -2,6 +2,37 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { solanaPaymentService } from '@/lib/solana';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
+// Helper function for calculating payouts
+function calculatePayouts(
+  users: Array<{ id: string; totalPoints: number; walletAddress: string | null }>,
+  totalRewardPool: number,
+  creatorFeePercentage: number = 5
+): Array<{ userId: string; amount: number; creatorFee: number }> {
+  const usersWithWallets = users.filter(user => user.walletAddress && user.totalPoints > 0);
+  
+  if (usersWithWallets.length === 0) {
+    return [];
+  }
+
+  const totalPoints = usersWithWallets.reduce((sum, user) => sum + user.totalPoints, 0);
+  
+  if (totalPoints === 0) {
+    return [];
+  }
+
+  const creatorFeeAmount = (totalRewardPool * creatorFeePercentage) / 100;
+  const remainingRewardPool = totalRewardPool - creatorFeeAmount;
+
+  return usersWithWallets.map(user => ({
+    userId: user.id,
+    amount: (user.totalPoints / totalPoints) * remainingRewardPool,
+    creatorFee: (user.totalPoints / totalPoints) * creatorFeeAmount,
+  }));
+}
+
 export async function POST(request: NextRequest) {
   try {
     console.log('Starting payout process...');
@@ -37,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate payout amounts
-    const payoutCalculations = solanaPaymentService.constructor.calculatePayouts(
+    const payoutCalculations = calculatePayouts(
       usersWithPoints,
       totalRewardPool,
       creatorFeePercentage
@@ -53,7 +84,7 @@ export async function POST(request: NextRequest) {
     // Process each payout
     for (const calc of payoutCalculations) {
       try {
-        const user = usersWithPoints.find(u => u.id === calc.userId);
+        const user = usersWithPoints.find((u: any) => u.id === calc.userId);
         if (!user || !user.walletAddress) continue;
 
         // Create payout record
@@ -66,7 +97,7 @@ export async function POST(request: NextRequest) {
             periodStart,
             periodEnd,
             totalPoints: user.totalPoints,
-            totalPoolPoints: usersWithPoints.reduce((sum, u) => sum + u.totalPoints, 0),
+            totalPoolPoints: usersWithPoints.reduce((sum: number, u: any) => sum + u.totalPoints, 0),
             creatorFee: calc.creatorFee,
           }
         });
@@ -139,7 +170,7 @@ export async function POST(request: NextRequest) {
     if (successfulPayouts > 0) {
       await prisma.user.updateMany({
         where: {
-          id: { in: payoutCalculations.map(p => p.userId) }
+          id: { in: payoutCalculations.map((p: any) => p.userId) }
         },
         data: {
           totalPoints: 0

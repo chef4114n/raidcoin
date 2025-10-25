@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { twitterApi } from '@/lib/twitter';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     console.log('Starting point calculation process...');
@@ -81,7 +84,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Batch update user total points
-    for (const [userId, pointsDelta] of userPointsMap.entries()) {
+    const userPointsEntries = Array.from(userPointsMap.entries());
+    for (const [userId, pointsDelta] of userPointsEntries) {
       try {
         await prisma.user.update({
           where: { id: userId },

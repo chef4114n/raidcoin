@@ -1,198 +1,317 @@
-# RaidCoin Rewards Platform
+# 🪙 $RAIDCOIN Twitter Rewards Platform
 
-A Next.js application that rewards users with Solana (SOL) for posting about $raidcoin on Twitter/X.
+A complete Web3 rewards system that incentivizes Twitter engagement for the $RAIDCOIN community. Users earn Solana (SOL) rewards for posting about $raidcoin, with automatic payouts based on engagement metrics.
 
-## Features
+## 🌟 Features
 
-- **User-Submitted Tweets**: Users can submit their own tweets for point calculation (solves expensive API costs)
-- **Twitter API Integration**: Optional automated tracking with API (requires paid tier)  
-- **Point System**: Awards points based on tweet engagement (likes, retweets, replies, quotes)
-- **Solana Payouts**: Distributes SOL rewards every 10 minutes based on accumulated points
-- **Real-time Dashboard**: Track your points, posts, and payout history
-- **Wallet Integration**: Connect your Solana wallet to receive payments
+### Core Functionality
+- **🐦 Twitter OAuth Integration**: Seamless sign-in with Twitter/X
+- **💎 Manual Tweet Submission**: Cost-effective alternative to expensive Twitter APIs
+- **🔥 Smart Point System**: Rewards based on likes, retweets, replies, and quotes
+- **⚡ Automated SOL Payouts**: Real-time distributions every 10 minutes
+- **👛 Wallet Management**: Bind Solana wallets for seamless payments
+- **📊 Real-time Dashboard**: Track points, submissions, and payout history
 
-## How It Works
+### Advanced Features
+- **🛡️ Admin Review System**: Anti-fraud protection with manual approval
+- **📈 Engagement Analytics**: Detailed metrics and performance tracking
+- **🔄 Automated Point Calculation**: Background processing with Twitter API
+- **🎯 Community Gamification**: Leaderboards and achievement system
+- **🔐 Secure Authentication**: NextAuth.js with database sessions
 
-### Option 1: User-Submitted Tweets (Free)
-1. **Sign in with Twitter** - Connect your Twitter account
-2. **Post about $raidcoin** - Create tweets mentioning $raidcoin, #raidcoin, or @raidcoin
-3. **Submit Tweet URL** - Paste your tweet URL in the dashboard
-4. **Earn Points** - Get points based on your tweet's engagement
-5. **Receive SOL** - Automatic payouts every 10 minutes proportional to your points
+## 🚀 How It Works
 
-### Option 2: Automated Tracking (Paid API)
-1. **Configure Twitter API** - Add Bearer Token to environment variables
-2. **Automatic Detection** - System finds your tweets automatically
-3. **Real-time Updates** - Engagement metrics updated automatically
-4. **Earn & Receive** - Same point and payout system
+### For Users
+1. **Connect Twitter Account** → Sign in with Twitter OAuth
+2. **Bind Solana Wallet** → Add your wallet address for payments
+3. **Post About $RAIDCOIN** → Create engaging content mentioning $raidcoin
+4. **Submit Tweet URL** → Paste your tweet link in the dashboard
+5. **Earn Points** → Get rewarded based on engagement metrics
+6. **Receive SOL** → Automatic payouts every 10 minutes
 
-## Tech Stack
+### For Admins
+1. **Review Submissions** → Approve/reject user-submitted tweets
+2. **Monitor Analytics** → Track platform performance and user activity
+3. **Process Payouts** → Automated SOL distribution system
+4. **Manage Users** → User verification and wallet management
 
-- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
-- **Backend**: Next.js API Routes, Prisma ORM
-- **Database**: PostgreSQL
-- **Authentication**: NextAuth.js with Twitter OAuth
-- **Blockchain**: Solana Web3.js
-- **Deployment**: Vercel
+## 🛠️ Tech Stack
 
-## Setup Instructions
+### Frontend
+- **Framework**: Next.js 14 with App Router
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Components**: Lucide React Icons
+- **State Management**: Zustand
+
+### Backend
+- **API**: Next.js API Routes (serverless)
+- **Database**: PostgreSQL (Supabase)
+- **ORM**: Prisma
+- **Authentication**: NextAuth.js
+- **External APIs**: Twitter API v2.0
+
+### Blockchain
+- **Network**: Solana (mainnet/devnet)
+- **Library**: @solana/web3.js
+- **Wallets**: Multi-wallet support
+
+### Infrastructure
+- **Hosting**: Vercel
+- **Database**: Supabase PostgreSQL
+- **Environment**: Docker-ready
+
+## ⚙️ Installation & Setup
 
 ### Prerequisites
-
 - Node.js 18+
-- PostgreSQL database
+- npm or yarn
+- PostgreSQL database (Supabase recommended)
 - Twitter Developer Account
 - Solana wallet with SOL for payouts
 
-### Environment Variables
-
-Copy `.env.example` to `.env.local` and fill in your values:
-
+### 1. Clone Repository
 ```bash
-# Database
-DATABASE_URL="postgresql://username:password@localhost:5432/raidcoin_db"
-
-# NextAuth
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your-secret-key-here"
-
-# Twitter/X API
-TWITTER_BEARER_TOKEN="your-twitter-bearer-token"
-TWITTER_CLIENT_ID="your-twitter-client-id"
-TWITTER_CLIENT_SECRET="your-twitter-client-secret"
-
-# Solana
-SOLANA_RPC_URL="https://api.mainnet-beta.solana.com"
-SOLANA_PRIVATE_KEY="your-solana-private-key-base58"
-CREATOR_WALLET_ADDRESS="your-creator-wallet-address"
-
-# App Configuration
-CREATOR_FEE_PERCENTAGE="5"
-POINTS_CALCULATION_INTERVAL="10"
-```
-
-### Installation
-
-1. Clone the repository:
-```bash
-git clone <your-repo-url>
+git clone https://github.com/chef4114n/raidcoin.git
 cd raidcoin
-```
-
-2. Install dependencies:
-```bash
 npm install
 ```
 
-3. Set up the database:
+### 2. Environment Configuration
+
+Create `.env.local` with the following variables:
+
 ```bash
-npm run db:push
-npm run db:generate
+# Database (Supabase)
+DATABASE_URL="postgresql://postgres:[PASSWORD]@db.[PROJECT].supabase.co:5432/postgres"
+POSTGRES_PRISMA_URL="postgresql://postgres:[PASSWORD]@aws-1-us-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+
+# NextAuth
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="your-secure-secret-key"
+
+# Twitter OAuth 2.0 (Required)
+TWITTER_CLIENT_ID="your-oauth2-client-id"
+TWITTER_CLIENT_SECRET="your-oauth2-client-secret"
+TWITTER_BEARER_TOKEN="your-bearer-token" # Optional, for automated tracking
+
+# Solana
+SOLANA_NETWORK="devnet" # or "mainnet-beta"
+SOLANA_PRIVATE_KEY="your-base58-encoded-private-key"
+CREATOR_WALLET_ADDRESS="your-creator-wallet-address"
+
+# App Configuration
+CREATOR_FEE_PERCENTAGE="10"
+POINTS_CALCULATION_INTERVAL="10"
+ADMIN_EMAIL="admin@example.com"
 ```
 
-4. Run the development server:
+### 3. Database Setup
+```bash
+# Deploy database schema
+npm run db:push
+
+# Generate Prisma client
+npm run db:generate
+
+# (Optional) Open Prisma Studio
+npm run db:studio
+```
+
+### 4. Twitter Developer Setup
+
+#### Create Twitter App
+1. Visit [Twitter Developer Portal](https://developer.twitter.com/en/portal/dashboard)
+2. Create new app with **OAuth 2.0** enabled
+3. Configure settings:
+   - **App Type**: Web App
+   - **Callback URL**: `http://localhost:3000/api/auth/callback/twitter`
+   - **Website URL**: `http://localhost:3000`
+   - **Scopes**: `tweet.read`, `users.read`
+
+#### Get Credentials
+1. Go to **Keys and tokens** tab
+2. Copy **OAuth 2.0 Client ID** and **Client Secret**
+3. (Optional) Generate **Bearer Token** for automated tracking
+
+### 5. Solana Wallet Setup
+
+Generate a new keypair for payouts:
+```bash
+node -e "
+const { Keypair } = require('@solana/web3.js');
+const bs58 = require('bs58').default;
+const keypair = Keypair.generate();
+console.log('SOLANA_PRIVATE_KEY=' + bs58.encode(Buffer.from(keypair.secretKey)));
+console.log('CREATOR_WALLET_ADDRESS=' + keypair.publicKey.toString());
+"
+```
+
+⚠️ **Important**: Fund this wallet with SOL for payouts!
+
+### 6. Run Development Server
 ```bash
 npm run dev
 ```
+Visit [http://localhost:3000](http://localhost:3000)
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+## 🌐 Deployment
 
-## Deployment to Vercel
+### Vercel Deployment
+1. **Push to GitHub**:
+   ```bash
+   git add .
+   git commit -m "Initial deployment"
+   git push origin main
+   ```
 
-1. **Connect to Vercel**:
-   - Push your code to GitHub
-   - Connect your repository to Vercel
-   - Configure environment variables in Vercel dashboard
+2. **Connect to Vercel**:
+   - Import repository in Vercel dashboard
+   - Configure environment variables
+   - Deploy automatically
 
-2. **Database Setup**:
-   - Use a cloud PostgreSQL service (Supabase, Neon, or similar)
-   - Update `DATABASE_URL` in Vercel environment variables
+3. **Update Twitter Callback**:
+   - Change callback URL to: `https://your-app.vercel.app/api/auth/callback/twitter`
 
-### Twitter API Setup (Optional)
+4. **Database Migration**:
+   ```bash
+   npm run db:push
+   ```
 
-**Free Tier (Testing Only):**
-- Cost: Free
-- Limits: 1,500 tweets/month
-- Suitable for: Small-scale testing
+## 📊 Point System
 
-**Basic Tier (Production):**
-- Cost: $100/month  
-- Limits: 10,000 tweets/month
-- Suitable for: Small to medium communities
+### Engagement Scoring
+- **👍 Likes**: 1 point each
+- **🔄 Retweets**: 2 points each
+- **💬 Replies**: 3 points each
+- **🗣️ Quotes**: 2 points each
 
-**Alternative: User Submission (Recommended)**
-- Cost: Free
-- Users submit their own tweet URLs
-- Manual verification process
-- Community-driven approach
+### Bonus Multipliers
+- **🎯 $RAIDCOIN Mention**: +10% bonus
+- **🔥 High Engagement**: Bonus for 100+ interactions
+- **⏰ Recent Posts**: Time-based bonus decay
 
-For free usage, the platform defaults to user-submitted tweets. Users can paste their tweet URLs directly in the dashboard.
+### Payout Calculation
+- **Minimum Threshold**: 50 points
+- **Distribution**: Proportional to total points
+- **Creator Fee**: 10% of total pool
+- **Frequency**: Every 10 minutes
 
-4. **Solana Configuration**:
-   - Generate a new Solana keypair for the payout wallet
-   - Convert private key to base58 format
-   - Fund the wallet with SOL for payouts
+## 🔧 API Reference
 
-5. **Deploy**:
-   - Vercel will automatically deploy with the cron jobs configured
+### Authentication Required
+```
+GET  /api/user/stats        # User statistics
+GET  /api/user/posts        # User submissions
+GET  /api/user/payouts      # Payout history
+POST /api/user/wallet       # Update wallet address
+POST /api/submit-tweet      # Submit tweet for review
+```
 
-## API Endpoints
+### Admin Only
+```
+GET  /api/admin/review-posts    # Pending submissions
+POST /api/admin/review-posts    # Approve/reject tweets
+POST /api/calculate-points      # Manual point calculation
+POST /api/process-payouts       # Trigger payouts
+```
 
-### Public Endpoints
-- `GET /api/auth/[...nextauth]` - Authentication endpoints
+### System (Automated)
+```
+POST /api/fetch-tweets      # Automated tweet discovery
+POST /api/calculate-points  # Background point calculation
+POST /api/process-payouts   # Scheduled payout processing
+```
 
-### Protected Endpoints
-- `POST /api/fetch-tweets` - Fetch new tweets (cron job)
-- `POST /api/calculate-points` - Calculate points for tweets (cron job)  
-- `POST /api/process-payouts` - Process SOL payouts (cron job)
-- `GET /api/user/stats` - Get user statistics
-- `GET /api/user/posts` - Get user's tracked posts
-- `GET /api/user/payouts` - Get user's payout history
-- `POST /api/user/wallet` - Update user's wallet address
+## 🔒 Security Features
 
-## Point Calculation
+- **🛡️ Authentication**: NextAuth.js with database sessions
+- **🔐 Environment Variables**: Secure secret management
+- **🚫 API Rate Limiting**: Prevents abuse and spam
+- **✅ Input Validation**: Comprehensive request validation
+- **🔍 Admin Review**: Manual approval for quality control
+- **💾 Audit Logging**: Complete transaction history
 
-Points are awarded based on engagement metrics:
-- **Likes**: 1 point each
-- **Retweets**: 3 points each  
-- **Replies**: 2 points each
-- **Quotes**: 3 points each
+## 🏗️ Project Structure
 
-Additional factors:
-- Minimum 1 point for posting
-- Time decay bonus for recent posts
-- Points reset after each payout cycle
+```
+raidcoin/
+├── app/                    # Next.js App Router
+│   ├── api/               # API routes
+│   │   ├── auth/          # NextAuth handlers
+│   │   ├── user/          # User endpoints
+│   │   └── admin/         # Admin endpoints
+│   ├── auth/              # Auth pages
+│   └── page.tsx           # Home page
+├── components/            # React components
+│   ├── dashboard.tsx      # User dashboard
+│   ├── landing-page.tsx   # Landing page
+│   └── admin-panel.tsx    # Admin interface
+├── lib/                   # Utility libraries
+│   ├── prisma.ts          # Database client
+│   ├── solana.ts          # Blockchain integration
+│   └── twitter.ts         # Twitter API client
+├── prisma/                # Database schema
+└── public/                # Static assets
+```
 
-## Security Considerations
+## 🚀 Roadmap
 
-- Environment variables are properly secured
-- API endpoints require authentication where appropriate
-- Solana private keys are handled securely
-- Rate limiting is implemented for API calls
+### Phase 1 (Current)
+- [x] Core rewards system
+- [x] Twitter OAuth integration
+- [x] Manual tweet submission
+- [x] Automated SOL payouts
+- [x] Admin review system
 
-## Contributing
+### Phase 2 (Next)
+- [ ] Mobile responsive design
+- [ ] Advanced analytics dashboard
+- [ ] Referral system
+- [ ] Multiple token support
+- [ ] Performance optimizations
+
+### Phase 3 (Future)
+- [ ] Mobile app (React Native)
+- [ ] Discord integration
+- [ ] NFT rewards
+- [ ] Community governance
+- [ ] Multi-chain support
+
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+2. Create feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'Add amazing feature'`
+4. Push to branch: `git push origin feature/amazing-feature`
+5. Open Pull Request
 
-## License
+### Development Guidelines
+- Follow TypeScript best practices
+- Use Tailwind CSS for styling
+- Write comprehensive tests
+- Update documentation
+- Follow conventional commits
 
-MIT License - see LICENSE file for details
+## 📞 Support
 
-## Support
+- **🐛 Issues**: [GitHub Issues](https://github.com/chef4114n/raidcoin/issues)
+- **💬 Discussions**: [GitHub Discussions](https://github.com/chef4114n/raidcoin/discussions)
+- **📧 Email**: support@raidcoin.example
+- **🐦 Twitter**: [@raidcoin](https://twitter.com/raidcoin)
 
-For issues or questions:
-- Open a GitHub issue
-- Contact the development team
-- Check the documentation
+## 📄 License
 
-## Roadmap
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-- [ ] Mobile app development
-- [ ] Multiple token support
-- [ ] Advanced analytics dashboard
-- [ ] Community features
-- [ ] Referral system
+## 🙏 Acknowledgments
+
+- **Solana Foundation** for blockchain infrastructure
+- **Vercel** for hosting and deployment
+- **Supabase** for database services
+- **Twitter** for API access
+- **Open Source Community** for amazing tools and libraries
+
+---
+
+**Built with ❤️ for the $RAIDCOIN community**

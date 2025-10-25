@@ -51,6 +51,7 @@ export function Dashboard() {
   const [payouts, setPayouts] = useState<Payout[]>([])
   const [loading, setLoading] = useState(true)
   const [walletAddress, setWalletAddress] = useState('')
+  const [savedWalletAddress, setSavedWalletAddress] = useState('')
   const [updating, setUpdating] = useState(false)
 
   useEffect(() => {
@@ -67,15 +68,23 @@ export function Dashboard() {
 
   const fetchUserData = async () => {
     try {
-      const [statsRes, postsRes, payoutsRes] = await Promise.all([
+      const [statsRes, postsRes, payoutsRes, walletRes] = await Promise.all([
         fetch('/api/user/stats'),
         fetch('/api/user/posts'),
-        fetch('/api/user/payouts')
+        fetch('/api/user/payouts'),
+        fetch('/api/user/wallet-status')
       ])
 
       if (statsRes.ok) setStats(await statsRes.json())
       if (postsRes.ok) setPosts(await postsRes.json())
       if (payoutsRes.ok) setPayouts(await payoutsRes.json())
+      if (walletRes.ok) {
+        const walletData = await walletRes.json()
+        setSavedWalletAddress(walletData.walletAddress || '')
+        if (!walletAddress) {
+          setWalletAddress(walletData.walletAddress || '')
+        }
+      }
     } catch (error) {
       console.error('Error fetching user data:', error)
     } finally {
@@ -95,9 +104,11 @@ export function Dashboard() {
       })
 
       if (response.ok) {
+        setSavedWalletAddress(walletAddress)
         alert('Wallet address updated successfully!')
       } else {
-        alert('Failed to update wallet address')
+        const errorData = await response.json()
+        alert(`Failed to update wallet address: ${errorData.error}`)
       }
     } catch (error) {
       console.error('Error updating wallet:', error)
@@ -191,31 +202,98 @@ export function Dashboard() {
         <div className="bg-white rounded-lg p-6 shadow-sm mb-8">
           <h2 className="text-xl font-bold mb-4 flex items-center">
             <Wallet className="mr-2" />
-            Solana Wallet Setup
+            Solana Wallet Management
           </h2>
-          <div className="flex items-center space-x-4">
-            <WalletMultiButton />
-            {connected && (
-              <div className="flex-1">
-                <input
-                  type="text"
-                  value={walletAddress}
-                  onChange={(e) => setWalletAddress(e.target.value)}
-                  placeholder="Your Solana wallet address"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                />
-                <button
-                  onClick={updateWalletAddress}
-                  disabled={updating}
-                  className="mt-2 bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 disabled:opacity-50"
-                >
-                  {updating ? 'Updating...' : 'Update Wallet'}
-                </button>
+          
+          {savedWalletAddress ? (
+            <div className="space-y-4">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-green-800 mb-1">✅ Wallet Connected</p>
+                    <code className="text-sm text-green-700 bg-green-100 px-2 py-1 rounded">
+                      {savedWalletAddress}
+                    </code>
+                  </div>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(savedWalletAddress)}
+                    className="text-green-600 hover:text-green-700 ml-2"
+                    title="Copy address"
+                  >
+                    📋
+                  </button>
+                </div>
               </div>
-            )}
-          </div>
-          <p className="text-sm text-gray-500 mt-2">
-            Connect your wallet to receive SOL payouts. Payouts happen automatically every 10 minutes.
+              
+              {/* Option to change wallet */}
+              <details className="mt-4">
+                <summary className="cursor-pointer text-sm text-gray-600 hover:text-gray-800">
+                  Change wallet address
+                </summary>
+                <div className="mt-3 space-y-3">
+                  <div className="flex items-center space-x-4">
+                    <WalletMultiButton className="!bg-blue-600 hover:!bg-blue-700" />
+                    {connected && (
+                      <span className="text-sm text-gray-600">
+                        Connected: {publicKey?.toString().slice(0, 8)}...
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      value={walletAddress}
+                      onChange={(e) => setWalletAddress(e.target.value)}
+                      placeholder="Enter new wallet address"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                    <button
+                      onClick={updateWalletAddress}
+                      disabled={updating || !walletAddress || walletAddress === savedWalletAddress}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm"
+                    >
+                      {updating ? 'Updating...' : 'Update'}
+                    </button>
+                  </div>
+                </div>
+              </details>
+            </div>
+          ) : (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-center space-x-3">
+                <div className="text-yellow-600">⚠️</div>
+                <div>
+                  <p className="text-sm font-medium text-yellow-800 mb-1">No Wallet Connected</p>
+                  <p className="text-sm text-yellow-700">Please connect a wallet to receive SOL payouts.</p>
+                </div>
+              </div>
+              <div className="mt-4 flex items-center space-x-4">
+                <WalletMultiButton />
+                {connected && (
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      value={walletAddress}
+                      onChange={(e) => setWalletAddress(e.target.value)}
+                      placeholder="Confirm wallet address"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                    <button
+                      onClick={updateWalletAddress}
+                      disabled={updating || !walletAddress}
+                      className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {updating ? 'Connecting...' : 'Connect Wallet'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          <p className="text-xs text-gray-500 mt-3">
+            💡 Payouts happen automatically every 10 minutes to your connected wallet.
           </p>
         </div>
 

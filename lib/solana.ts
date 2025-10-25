@@ -29,10 +29,12 @@ class SolanaPaymentService {
 
   constructor() {
     // Initialize connection
-    this.connection = new Connection(
-      process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com',
-      'confirmed'
-    );
+    const network = process.env.SOLANA_NETWORK || 'mainnet-beta';
+    const rpcUrl = network === 'devnet' 
+      ? 'https://api.devnet.solana.com'
+      : process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
+    
+    this.connection = new Connection(rpcUrl, 'confirmed');
 
     // Initialize payer keypair from private key
     const privateKeyString = process.env.SOLANA_PRIVATE_KEY;

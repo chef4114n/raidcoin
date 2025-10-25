@@ -13,13 +13,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user
+    // Get user's wallet status
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      include: {
-        posts: {
-          select: { pointsAwarded: true }
-        }
+      select: { 
+        walletAddress: true,
+        id: true,
+        name: true,
+        twitterHandle: true
       }
     });
 
@@ -27,24 +28,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Calculate rank
-    const usersAbove = await prisma.user.count({
-      where: { totalPoints: { gt: user.totalPoints } }
+    return NextResponse.json({ 
+      hasWallet: !!user.walletAddress,
+      walletAddress: user.walletAddress,
+      user: {
+        id: user.id,
+        name: user.name,
+        twitterHandle: user.twitterHandle
+      }
     });
-    const rank = usersAbove + 1;
-
-    const stats = {
-      totalPoints: user.totalPoints,
-      totalEarned: user.totalEarned,
-      postCount: user.posts.length,
-      rank
-    };
-
-    return NextResponse.json(stats);
   } catch (error) {
-    console.error('Error fetching user stats:', error);
+    console.error('Error checking wallet status:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch stats' },
+      { error: 'Failed to check wallet status' },
       { status: 500 }
     );
   }

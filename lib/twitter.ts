@@ -92,7 +92,7 @@ class TwitterAPI {
       
       const enrichedTweets = tweets.map((tweet: Tweet) => ({
         ...tweet,
-        author: users.find(user => user.id === tweet.author_id)
+        author: users.find((user: any) => user.id === tweet.author_id)
       }));
 
       return {

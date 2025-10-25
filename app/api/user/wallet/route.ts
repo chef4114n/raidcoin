@@ -1,7 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
-import { solanaPaymentService } from '@/lib/solana';
+import { PublicKey } from '@solana/web3.js';
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
+// Helper function to validate Solana address
+function isValidSolanaAddress(address: string): boolean {
+  try {
+    new PublicKey(address);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate Solana address
-    if (!solanaPaymentService.constructor.isValidAddress(walletAddress)) {
+    if (!isValidSolanaAddress(walletAddress)) {
       return NextResponse.json({ error: 'Invalid Solana address' }, { status: 400 });
     }
 

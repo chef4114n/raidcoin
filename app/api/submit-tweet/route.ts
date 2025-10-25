@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import { twitterApi } from '@/lib/twitter';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession();
@@ -72,9 +75,9 @@ export async function POST(request: NextRequest) {
           tweetId: tweet.id,
           userId: user.id,
           content: tweet.text,
-          authorHandle: tweet.author.username,
-          authorName: tweet.author.name,
-          authorImage: tweet.author.profile_image_url,
+          authorHandle: tweet.author?.username || '',
+          authorName: tweet.author?.name || '',
+          authorImage: tweet.author?.profile_image_url || '',
           likes: tweet.public_metrics.like_count,
           retweets: tweet.public_metrics.retweet_count,
           replies: tweet.public_metrics.reply_count,
