@@ -1,28 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { prisma } from '@/lib/prisma';
+import { authOptions } from '@/lib/auth';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
-    if (!session?.user?.email) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user and check if they're an admin
+    const userId = (session.user as any).id;
+    if (!userId) {
+      return NextResponse.json({ error: 'No user ID in session' }, { status: 401 });
+    }
+
+    // Get user and check if their wallet matches creator wallet
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
+      where: { id: userId },
+      select: { walletAddress: true }
     });
 
-    // For now, you can manually set admin users or check a specific email
-    const isAdmin = session.user.email === 'your-admin-email@example.com'; // Change this to your email
+    if (!user?.walletAddress) {
+      return NextResponse.json({ error: 'No wallet connected' }, { status: 403 });
+    }
+
+    // Check if user's wallet matches the creator wallet
+    const creatorWalletAddress = process.env.CREATOR_WALLET_ADDRESS;
+    const isAdmin = user.walletAddress === creatorWalletAddress;
 
     if (!isAdmin) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+      return NextResponse.json({ error: 'Admin access required - Creator wallet only' }, { status: 403 });
     }
 
     // Get pending posts that need manual review
@@ -59,16 +73,33 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
-    if (!session?.user?.email) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const isAdmin = session.user.email === 'your-admin-email@example.com'; // Change this to your email
+    const userId = (session.user as any).id;
+    if (!userId) {
+      return NextResponse.json({ error: 'No user ID in session' }, { status: 401 });
+    }
+
+    // Get user and check if their wallet matches creator wallet
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { walletAddress: true }
+    });
+
+    if (!user?.walletAddress) {
+      return NextResponse.json({ error: 'No wallet connected' }, { status: 403 });
+    }
+
+    // Check if user's wallet matches the creator wallet
+    const creatorWalletAddress = process.env.CREATOR_WALLET_ADDRESS;
+    const isAdmin = user.walletAddress === creatorWalletAddress;
 
     if (!isAdmin) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+      return NextResponse.json({ error: 'Admin access required - Creator wallet only' }, { status: 403 });
     }
 
     const { postId, likes, retweets, replies, quotes, approved } = await request.json();

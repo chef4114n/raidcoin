@@ -3,7 +3,7 @@
 import { useSession, signOut } from 'next-auth/react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { 
   Twitter, 
   Coins, 
@@ -13,7 +13,8 @@ import {
   ExternalLink,
   Trophy,
   Clock,
-  Wallet
+  Wallet,
+  RefreshCw
 } from 'lucide-react'
 import { SubmitTweet } from '@/components/submit-tweet'
 
@@ -53,10 +54,22 @@ export function Dashboard() {
   const [walletAddress, setWalletAddress] = useState('')
   const [savedWalletAddress, setSavedWalletAddress] = useState('')
   const [updating, setUpdating] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
+
+  // Auto-refresh interval (60 seconds for dashboard)
+  const REFRESH_INTERVAL = 60000
 
   useEffect(() => {
     if (session) {
       fetchUserData()
+      
+      // Set up auto-refresh
+      const interval = setInterval(() => {
+        fetchUserData(true) // Silent refresh
+      }, REFRESH_INTERVAL)
+
+      return () => clearInterval(interval)
     }
   }, [session])
 
@@ -66,7 +79,13 @@ export function Dashboard() {
     }
   }, [connected, publicKey])
 
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async (silent = false) => {
+    if (!silent) {
+      setLoading(true)
+    } else {
+      setRefreshing(true)
+    }
+    
     try {
       const [statsRes, postsRes, payoutsRes, walletRes] = await Promise.all([
         fetch('/api/user/stats'),
@@ -85,12 +104,17 @@ export function Dashboard() {
           setWalletAddress(walletData.walletAddress || '')
         }
       }
+      setLastRefresh(new Date())
     } catch (error) {
       console.error('Error fetching user data:', error)
     } finally {
-      setLoading(false)
+      if (!silent) {
+        setLoading(false)
+      } else {
+        setRefreshing(false)
+      }
     }
-  }
+  }, [walletAddress])
 
   const updateWalletAddress = async () => {
     if (!walletAddress) return
@@ -120,34 +144,49 @@ export function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+          <p className="text-slate-300 text-lg">Loading your dashboard...</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-950">
       {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-4">
+      <header className="bg-slate-900 border-b border-slate-700 shadow-professional">
+        <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <Coins className="h-8 w-8 text-primary-600 mr-3" />
-              <h1 className="text-2xl font-bold text-gray-900">RaidCoin Rewards</h1>
+              <Coins className="h-10 w-10 text-indigo-400 mr-4" />
+              <h1 className="text-3xl font-bold text-slate-50 tracking-tight">
+                <span className="text-gradient">RaidCoin</span> Rewards
+              </h1>
             </div>
             <div className="flex items-center space-x-4">
+              <button
+                onClick={() => fetchUserData()}
+                disabled={loading || refreshing}
+                className="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-lg flex items-center space-x-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Refresh data"
+              >
+                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+              </button>
               <img 
                 src={session?.user?.image || ''} 
                 alt="Profile" 
-                className="w-8 h-8 rounded-full"
+                className="w-10 h-10 rounded-full border-2 border-slate-600"
               />
-              <span className="font-medium">@{session?.user?.name}</span>
+              <span className="font-semibold text-slate-200 text-lg">@{session?.user?.name}</span>
               <button
                 onClick={() => signOut()}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-slate-400 hover:text-slate-200 transition-colors p-2 hover:bg-slate-800 rounded-lg"
+                title="Sign out"
               >
-                <LogOut className="h-5 w-5" />
+                <LogOut className="h-6 w-6" />
               </button>
             </div>
           </div>
@@ -155,69 +194,78 @@ export function Dashboard() {
       </header>
 
       <div className="container mx-auto px-4 py-8">
+        {lastRefresh && (
+          <div className="mb-4 text-center">
+            <p className="text-slate-400 text-sm">
+              Last updated: {lastRefresh.toLocaleTimeString()}
+              {refreshing && <span className="ml-2 animate-pulse">• Refreshing...</span>}
+            </p>
+          </div>
+        )}
+        
         {/* Stats Cards */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg p-6 shadow-sm">
+        <div className="grid md:grid-cols-4 gap-6 mb-8 animate-fade-in">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 shadow-professional hover:shadow-glow transition-all duration-200 hover:scale-105">
             <div className="flex items-center">
-              <TrendingUp className="h-8 w-8 text-green-500" />
+              <TrendingUp className="h-10 w-10 text-emerald-400" />
               <div className="ml-4">
-                <p className="text-sm text-gray-500">Total Points</p>
-                <p className="text-2xl font-bold">{stats?.totalPoints || 0}</p>
+                <p className="text-sm text-slate-400 font-medium">Total Points</p>
+                <p className="text-2xl font-bold text-slate-50">{stats?.totalPoints || 0}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg p-6 shadow-sm">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 shadow-professional hover:shadow-glow transition-all duration-200 hover:scale-105">
             <div className="flex items-center">
-              <Coins className="h-8 w-8 text-yellow-500" />
+              <Coins className="h-10 w-10 text-amber-400" />
               <div className="ml-4">
-                <p className="text-sm text-gray-500">Total Earned</p>
-                <p className="text-2xl font-bold">{stats?.totalEarned.toFixed(4) || '0.0000'} SOL</p>
+                <p className="text-sm text-slate-400 font-medium">Total Earned</p>
+                <p className="text-2xl font-bold text-slate-50">{stats?.totalEarned.toFixed(4) || '0.0000'} SOL</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg p-6 shadow-sm">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 shadow-professional hover:shadow-glow transition-all duration-200 hover:scale-105">
             <div className="flex items-center">
-              <Twitter className="h-8 w-8 text-blue-500" />
+              <Twitter className="h-10 w-10 text-blue-400" />
               <div className="ml-4">
-                <p className="text-sm text-gray-500">Posts Tracked</p>
-                <p className="text-2xl font-bold">{stats?.postCount || 0}</p>
+                <p className="text-sm text-slate-400 font-medium">Posts Tracked</p>
+                <p className="text-2xl font-bold text-slate-50">{stats?.postCount || 0}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg p-6 shadow-sm">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 shadow-professional hover:shadow-glow transition-all duration-200 hover:scale-105">
             <div className="flex items-center">
-              <Trophy className="h-8 w-8 text-purple-500" />
+              <Trophy className="h-10 w-10 text-purple-400" />
               <div className="ml-4">
-                <p className="text-sm text-gray-500">Rank</p>
-                <p className="text-2xl font-bold">#{stats?.rank || '-'}</p>
+                <p className="text-sm text-slate-400 font-medium">Rank</p>
+                <p className="text-2xl font-bold text-slate-50">#{stats?.rank || '-'}</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Wallet Setup */}
-        <div className="bg-white rounded-lg p-6 shadow-sm mb-8">
-          <h2 className="text-xl font-bold mb-4 flex items-center">
-            <Wallet className="mr-2" />
+        <div className="bg-slate-900 border border-slate-700 rounded-xl p-8 shadow-professional mb-8 animate-fade-in">
+          <h2 className="text-2xl font-bold mb-6 flex items-center text-slate-50">
+            <Wallet className="mr-3 text-indigo-400" />
             Solana Wallet Management
           </h2>
           
           {savedWalletAddress ? (
-            <div className="space-y-4">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="space-y-6">
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-green-800 mb-1">✅ Wallet Connected</p>
-                    <code className="text-sm text-green-700 bg-green-100 px-2 py-1 rounded">
+                    <p className="text-sm font-semibold text-emerald-200 mb-2">✅ Wallet Connected</p>
+                    <code className="text-sm text-emerald-300 bg-slate-800 px-3 py-2 rounded-lg border border-slate-600 block">
                       {savedWalletAddress}
                     </code>
                   </div>
                   <button
                     onClick={() => navigator.clipboard.writeText(savedWalletAddress)}
-                    className="text-green-600 hover:text-green-700 ml-2"
+                    className="text-emerald-400 hover:text-emerald-300 ml-4 p-2 hover:bg-slate-800 rounded-lg transition-colors"
                     title="Copy address"
                   >
                     📋
@@ -226,32 +274,32 @@ export function Dashboard() {
               </div>
               
               {/* Option to change wallet */}
-              <details className="mt-4">
-                <summary className="cursor-pointer text-sm text-gray-600 hover:text-gray-800">
+              <details className="mt-6">
+                <summary className="cursor-pointer text-sm text-slate-400 hover:text-slate-200 transition-colors">
                   Change wallet address
                 </summary>
-                <div className="mt-3 space-y-3">
+                <div className="mt-4 space-y-4">
                   <div className="flex items-center space-x-4">
-                    <WalletMultiButton className="!bg-blue-600 hover:!bg-blue-700" />
+                    <WalletMultiButton className="!bg-indigo-600 hover:!bg-indigo-700 !border-indigo-500 !text-white !font-semibold !px-6 !py-3 !rounded-lg !transition-all !duration-200 hover:!scale-105 !shadow-glow" />
                     {connected && (
-                      <span className="text-sm text-gray-600">
+                      <span className="text-sm text-slate-400">
                         Connected: {publicKey?.toString().slice(0, 8)}...
                       </span>
                     )}
                   </div>
                   
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-3">
                     <input
                       type="text"
                       value={walletAddress}
                       onChange={(e) => setWalletAddress(e.target.value)}
                       placeholder="Enter new wallet address"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      className="flex-1 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-slate-50 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
                     />
                     <button
                       onClick={updateWalletAddress}
                       disabled={updating || !walletAddress || walletAddress === savedWalletAddress}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm"
+                      className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all duration-200 hover:scale-105 shadow-glow disabled:hover:scale-100"
                     >
                       {updating ? 'Updating...' : 'Update'}
                     </button>
@@ -260,29 +308,29 @@ export function Dashboard() {
               </details>
             </div>
           ) : (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <div className="flex items-center space-x-3">
-                <div className="text-yellow-600">⚠️</div>
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-6">
+              <div className="flex items-center space-x-4">
+                <div className="text-amber-400 text-2xl">⚠️</div>
                 <div>
-                  <p className="text-sm font-medium text-yellow-800 mb-1">No Wallet Connected</p>
-                  <p className="text-sm text-yellow-700">Please connect a wallet to receive SOL payouts.</p>
+                  <p className="text-sm font-semibold text-amber-200 mb-2">No Wallet Connected</p>
+                  <p className="text-sm text-amber-300">Please connect a wallet to receive SOL payouts.</p>
                 </div>
               </div>
-              <div className="mt-4 flex items-center space-x-4">
-                <WalletMultiButton />
+              <div className="mt-6 flex items-center space-x-4">
+                <WalletMultiButton className="!bg-indigo-600 hover:!bg-indigo-700 !border-indigo-500 !text-white !font-semibold !px-6 !py-3 !rounded-lg !transition-all !duration-200 hover:!scale-105 !shadow-glow" />
                 {connected && (
-                  <div className="flex-1">
+                  <div className="flex-1 space-y-3">
                     <input
                       type="text"
                       value={walletAddress}
                       onChange={(e) => setWalletAddress(e.target.value)}
                       placeholder="Confirm wallet address"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-slate-50 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
                     />
                     <button
                       onClick={updateWalletAddress}
                       disabled={updating || !walletAddress}
-                      className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                      className="w-full bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all duration-200 hover:scale-105 shadow-glow disabled:hover:scale-100"
                     >
                       {updating ? 'Connecting...' : 'Connect Wallet'}
                     </button>
@@ -292,7 +340,7 @@ export function Dashboard() {
             </div>
           )}
           
-          <p className="text-xs text-gray-500 mt-3">
+          <p className="text-xs text-slate-400 mt-6 text-center">
             💡 Payouts happen automatically every 10 minutes to your connected wallet.
           </p>
         </div>
@@ -302,25 +350,27 @@ export function Dashboard() {
 
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Recent Posts */}
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <h2 className="text-xl font-bold mb-4">Recent Posts</h2>
-            <div className="space-y-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-8 shadow-professional animate-slide-in">
+            <h2 className="text-2xl font-bold mb-6 text-slate-50">Recent Posts</h2>
+            <div className="space-y-6">
               {posts.length > 0 ? posts.slice(0, 5).map((post) => (
-                <div key={post.id} className="border-l-4 border-primary-500 pl-4">
-                  <p className="text-sm text-gray-600 mb-2">{post.content.substring(0, 100)}...</p>
+                <div key={post.id} className="border-l-4 border-indigo-500 pl-6 bg-slate-800 p-4 rounded-lg">
+                  <p className="text-sm text-slate-300 mb-3 leading-relaxed">{post.content.substring(0, 100)}...</p>
                   <div className="flex items-center justify-between text-sm">
-                    <div className="flex space-x-4 text-gray-500">
-                      <span>❤️ {post.likes}</span>
-                      <span>🔄 {post.retweets}</span>
-                      <span>💬 {post.replies}</span>
+                    <div className="flex space-x-4 text-slate-400">
+                      <span className="flex items-center">❤️ {post.likes}</span>
+                      <span className="flex items-center">🔄 {post.retweets}</span>
+                      <span className="flex items-center">💬 {post.replies}</span>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-green-600 font-medium">{post.pointsAwarded} pts</span>
+                    <div className="flex items-center space-x-3">
+                      <span className="text-emerald-400 font-semibold bg-emerald-500/10 px-3 py-1 rounded-full">
+                        {post.pointsAwarded} pts
+                      </span>
                       <a 
                         href={post.url} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="text-primary-600 hover:text-primary-700"
+                        className="text-indigo-400 hover:text-indigo-300 transition-colors p-1"
                       >
                         <ExternalLink className="h-4 w-4" />
                       </a>
@@ -328,7 +378,7 @@ export function Dashboard() {
                   </div>
                 </div>
               )) : (
-                <p className="text-gray-500 text-center py-8">
+                <p className="text-slate-400 text-center py-12 text-lg">
                   No posts tracked yet. Start posting about $raidcoin to earn points!
                 </p>
               )}
@@ -336,22 +386,22 @@ export function Dashboard() {
           </div>
 
           {/* Recent Payouts */}
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <h2 className="text-xl font-bold mb-4">Recent Payouts</h2>
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-8 shadow-professional animate-slide-in">
+            <h2 className="text-2xl font-bold mb-6 text-slate-50">Recent Payouts</h2>
             <div className="space-y-4">
               {payouts.length > 0 ? payouts.slice(0, 5).map((payout) => (
-                <div key={payout.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={payout.id} className="flex items-center justify-between p-4 bg-slate-800 border border-slate-600 rounded-lg hover:bg-slate-700 transition-colors">
                   <div>
-                    <p className="font-medium">{payout.amount.toFixed(4)} SOL</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="font-semibold text-slate-50">{payout.amount.toFixed(4)} SOL</p>
+                    <p className="text-sm text-slate-400">
                       {new Date(payout.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                   <div className="text-right">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      payout.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                      payout.status === 'PROCESSING' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      payout.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                      payout.status === 'PROCESSING' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                      'bg-red-500/10 text-red-400 border border-red-500/20'
                     }`}>
                       {payout.status}
                     </span>
@@ -360,7 +410,7 @@ export function Dashboard() {
                         href={`https://solscan.io/tx/${payout.txSignature}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="block text-xs text-primary-600 hover:text-primary-700 mt-1"
+                        className="block text-xs text-indigo-400 hover:text-indigo-300 mt-2 transition-colors"
                       >
                         View on Solscan
                       </a>
@@ -368,7 +418,7 @@ export function Dashboard() {
                   </div>
                 </div>
               )) : (
-                <p className="text-gray-500 text-center py-8">
+                <p className="text-slate-400 text-center py-12 text-lg">
                   No payouts yet. Keep earning points to receive your first payout!
                 </p>
               )}
@@ -377,17 +427,20 @@ export function Dashboard() {
         </div>
 
         {/* Instructions */}
-        <div className="bg-primary-50 rounded-lg p-6 mt-8">
-          <h3 className="text-lg font-bold text-primary-800 mb-3">How to Earn Points</h3>
-          <div className="grid md:grid-cols-3 gap-4 text-sm">
-            <div>
-              <strong className="text-primary-700">Mentions:</strong> Include $raidcoin, #raidcoin, or @raidcoin in your tweets
+        <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-8 mt-8 animate-fade-in">
+          <h3 className="text-xl font-bold text-indigo-200 mb-6">How to Earn Points</h3>
+          <div className="grid md:grid-cols-3 gap-6 text-sm">
+            <div className="bg-slate-800 p-4 rounded-lg border border-slate-600">
+              <strong className="text-indigo-300 block mb-2">Mentions:</strong>
+              <p className="text-slate-300 leading-relaxed">Include $raidcoin, #raidcoin, or @raidcoin in your tweets</p>
             </div>
-            <div>
-              <strong className="text-primary-700">Engagement:</strong> More likes, retweets, and replies = more points
+            <div className="bg-slate-800 p-4 rounded-lg border border-slate-600">
+              <strong className="text-indigo-300 block mb-2">Engagement:</strong>
+              <p className="text-slate-300 leading-relaxed">More likes, retweets, and replies = more points</p>
             </div>
-            <div>
-              <strong className="text-primary-700">Payouts:</strong> Automatic SOL distribution every 10 minutes based on points
+            <div className="bg-slate-800 p-4 rounded-lg border border-slate-600">
+              <strong className="text-indigo-300 block mb-2">Payouts:</strong>
+              <p className="text-slate-300 leading-relaxed">Automatic SOL distribution every 10 minutes based on points</p>
             </div>
           </div>
         </div>

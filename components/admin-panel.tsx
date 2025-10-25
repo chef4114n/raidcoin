@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
-import { CheckCircle, XCircle, ExternalLink, Eye } from 'lucide-react'
+import { useWallet } from '@solana/wallet-adapter-react'
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
+import { CheckCircle, XCircle, ExternalLink, Eye, Shield, Wallet, AlertTriangle, RefreshCw, DollarSign, Clock, Users } from 'lucide-react'
 
 interface PendingPost {
   id: string
@@ -22,29 +24,200 @@ interface PendingPost {
   }
 }
 
+interface AdminAuth {
+  isAdmin: boolean
+  hasWallet: boolean
+  walletAddress?: string
+  creatorWallet?: string
+}
+
+interface PayoutStatus {
+  system: {
+    solanaNetwork: string
+    creatorWallet: string
+    payoutInterval: string
+    creatorFeePercentage: string
+  }
+  wallet: {
+    payerAddress: string | null
+    balance: number | null
+    balanceError: string | null
+  }
+  database: {
+    totalUsers: number
+    usersWithWallets: number
+    usersWithPoints: number
+    totalPayouts: number
+    pendingPayouts: number
+    completedPayouts: number
+    failedPayouts: number
+  }
+  recentActivity: {
+    recentPayouts: any[]
+    recentLogs: any[]
+  }
+}
+
 export function AdminPanel() {
   const { data: session } = useSession()
+  const { connected, publicKey } = useWallet()
   const [pendingPosts, setPendingPosts] = useState<PendingPost[]>([])
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState<string | null>(null)
+  const [adminAuth, setAdminAuth] = useState<AdminAuth | null>(null)
+  const [checkingAuth, setCheckingAuth] = useState(true)
+  const [engagementInputs, setEngagementInputs] = useState<{[key: string]: any}>({})
+  const [refreshing, setRefreshing] = useState(false)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
+  const [showNewPostsNotification, setShowNewPostsNotification] = useState(false)
+  const [previousPostCount, setPreviousPostCount] = useState(0)
+  const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null)
+  const [activeTab, setActiveTab] = useState<'posts' | 'payouts'>('posts')
+  const [payoutStatus, setPayoutStatus] = useState<PayoutStatus | null>(null)
+  const [loadingPayoutStatus, setLoadingPayoutStatus] = useState(false)
+  const [triggeringPayout, setTriggeringPayout] = useState(false)
+
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setNotification({ message, type })
+    setTimeout(() => setNotification(null), 5000)
+  }
+
+  const fetchPayoutStatus = useCallback(async () => {
+    setLoadingPayoutStatus(true)
+    try {
+      const response = await fetch('/api/admin/payout-status')
+      if (response.ok) {
+        const result = await response.json()
+        setPayoutStatus(result.status)
+      }
+    } catch (error) {
+      console.error('Error fetching payout status:', error)
+    } finally {
+      setLoadingPayoutStatus(false)
+    }
+  }, [])
+
+  const triggerManualPayout = async () => {
+    setTriggeringPayout(true)
+    try {
+      const response = await fetch('/api/admin/payout-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'trigger_payout' })
+      })
+
+      const result = await response.json()
+      if (response.ok) {
+        showNotification(result.message, 'success')
+        await fetchPayoutStatus() // Refresh status
+      } else {
+        showNotification(result.error || 'Failed to trigger payout', 'error')
+      }
+    } catch (error) {
+      console.error('Error triggering payout:', error)
+      showNotification('Error triggering payout', 'error')
+    } finally {
+      setTriggeringPayout(false)
+    }
+  }
+
+  // Auto-refresh interval (30 seconds)
+  const REFRESH_INTERVAL = 30000
 
   useEffect(() => {
     if (session) {
-      fetchPendingPosts()
+      checkAdminAuth()
     }
   }, [session])
 
-  const fetchPendingPosts = async () => {
+  const fetchPendingPosts = useCallback(async (silent = false) => {
+    if (!silent) {
+      setLoading(true)
+    } else {
+      setRefreshing(true)
+    }
+    
     try {
       const response = await fetch('/api/admin/review-posts')
       if (response.ok) {
         const posts = await response.json()
+        
+        // Check if there are new posts
+        if (silent && posts.length > previousPostCount && previousPostCount > 0) {
+          setShowNewPostsNotification(true)
+          setTimeout(() => setShowNewPostsNotification(false), 5000) // Hide after 5 seconds
+        }
+        
         setPendingPosts(posts)
+        setPreviousPostCount(posts.length)
+        setLastRefresh(new Date())
       }
     } catch (error) {
       console.error('Error fetching pending posts:', error)
     } finally {
-      setLoading(false)
+      if (!silent) {
+        setLoading(false)
+      } else {
+        setRefreshing(false)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (adminAuth?.isAdmin) {
+      fetchPendingPosts()
+      
+      // Set up auto-refresh
+      const interval = setInterval(() => {
+        fetchPendingPosts(true) // Silent refresh
+      }, REFRESH_INTERVAL)
+
+      // Listen for tweet submissions from other components
+      const handleTweetSubmitted = () => {
+        console.log('New tweet submitted, refreshing admin panel...')
+        fetchPendingPosts(true)
+      }
+
+      window.addEventListener('tweetSubmitted', handleTweetSubmitted)
+
+      return () => {
+        clearInterval(interval)
+        window.removeEventListener('tweetSubmitted', handleTweetSubmitted)
+      }
+    }
+  }, [adminAuth, fetchPendingPosts])
+
+  // Fetch payout status when switching to payouts tab
+  useEffect(() => {
+    if (activeTab === 'payouts' && adminAuth?.isAdmin) {
+      fetchPayoutStatus()
+    }
+  }, [activeTab, adminAuth, fetchPayoutStatus])
+
+  const checkAdminAuth = async () => {
+    setCheckingAuth(true)
+    try {
+      const response = await fetch('/api/admin/auth')
+      if (response.ok) {
+        const authData = await response.json()
+        setAdminAuth(authData)
+      } else {
+        const errorData = await response.json()
+        setAdminAuth({
+          isAdmin: false,
+          hasWallet: errorData.hasWallet || false,
+          walletAddress: errorData.walletAddress,
+          creatorWallet: errorData.creatorWallet
+        })
+      }
+    } catch (error) {
+      console.error('Error checking admin auth:', error)
+      setAdminAuth({
+        isAdmin: false,
+        hasWallet: false
+      })
+    } finally {
+      setCheckingAuth(false)
     }
   }
 
@@ -67,20 +240,30 @@ export function AdminPanel() {
 
       if (response.ok) {
         const result = await response.json()
-        alert(`✅ ${result.message}${result.pointsAwarded ? ` (${result.pointsAwarded} points awarded)` : ''}`)
-        fetchPendingPosts() // Refresh the list
+        showNotification(
+          `${result.message}${result.pointsAwarded ? ` (${result.pointsAwarded} points awarded)` : ''}`,
+          'success'
+        )
+        
+        // Immediately refresh the list
+        await fetchPendingPosts()
+        
+        // Clear the engagement inputs for this post
+        setEngagementInputs(prev => {
+          const newInputs = { ...prev }
+          delete newInputs[postId]
+          return newInputs
+        })
       } else {
-        alert('❌ Failed to process review')
+        showNotification('Failed to process review', 'error')
       }
     } catch (error) {
       console.error('Error processing review:', error)
-      alert('❌ Error processing review')
+      showNotification('Error processing review', 'error')
     } finally {
       setProcessing(null)
     }
   }
-
-  const [engagementInputs, setEngagementInputs] = useState<{[key: string]: any}>({})
 
   const updateEngagement = (postId: string, field: string, value: number) => {
     setEngagementInputs(prev => ({
@@ -94,157 +277,441 @@ export function AdminPanel() {
 
   if (!session) {
     return (
-      <div className="p-8 text-center">
-        <p>Please sign in to access the admin panel.</p>
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="bg-slate-900 border border-slate-700 rounded-xl p-8 max-w-md w-full mx-4 text-center">
+          <Shield className="h-12 w-12 text-indigo-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-slate-50 mb-4">Admin Access Required</h2>
+          <p className="text-slate-300 mb-6">Please sign in to access the admin panel.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+          <p className="text-slate-300 text-lg">Checking admin authorization...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!adminAuth?.hasWallet) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="bg-slate-900 border border-slate-700 rounded-xl p-8 max-w-md w-full mx-4 text-center">
+          <Wallet className="h-12 w-12 text-amber-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-slate-50 mb-4">Wallet Required</h2>
+          <p className="text-slate-300 mb-6">Please connect a wallet to access admin features.</p>
+          <p className="text-slate-400 text-sm mb-6">Only the creator wallet can access admin panel.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!adminAuth?.isAdmin) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="bg-slate-900 border border-slate-700 rounded-xl p-8 max-w-lg w-full mx-4 text-center">
+          <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-slate-50 mb-4">Access Denied</h2>
+          <p className="text-slate-300 mb-4">Only the creator wallet can access this admin panel.</p>
+          
+          <div className="bg-slate-800 border border-slate-600 rounded-lg p-4 mb-6">
+            <p className="text-slate-400 text-sm mb-2">Your wallet:</p>
+            <code className="text-slate-200 text-sm bg-slate-700 px-3 py-2 rounded block break-all">
+              {adminAuth.walletAddress}
+            </code>
+            {adminAuth.creatorWallet && (
+              <>
+                <p className="text-slate-400 text-sm mb-2 mt-4">Creator wallet:</p>
+                <code className="text-slate-200 text-sm bg-slate-700 px-3 py-2 rounded block break-all">
+                  {adminAuth.creatorWallet}
+                </code>
+              </>
+            )}
+          </div>
+          
+          <p className="text-slate-400 text-sm">
+            Please contact the administrator if you believe this is an error.
+          </p>
+        </div>
       </div>
     )
   }
 
   if (loading) {
     return (
-      <div className="p-8 text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto"></div>
-        <p className="mt-2">Loading pending posts...</p>
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+          <p className="text-slate-300 text-lg">Loading pending posts...</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
-        <p className="text-gray-600">Review and approve manually submitted tweets</p>
-      </div>
-
-      {pendingPosts.length === 0 ? (
-        <div className="bg-white rounded-lg p-8 text-center">
-          <Eye className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No posts pending review</h3>
-          <p className="text-gray-500">All submitted tweets have been processed.</p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {pendingPosts.map((post) => (
-            <div key={post.id} className="bg-white rounded-lg p-6 shadow-sm border">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="font-medium text-gray-900">
-                    @{post.user.twitterHandle} ({post.user.name})
-                  </h3>
-                  <p className="text-sm text-gray-500">{post.user.email}</p>
-                  <p className="text-sm text-gray-500">
-                    Submitted: {new Date(post.tweetCreatedAt).toLocaleDateString()}
-                  </p>
-                </div>
-                <a 
-                  href={post.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-primary-600 hover:text-primary-700"
-                >
-                  <ExternalLink className="h-5 w-5" />
-                </a>
-              </div>
-
-              <div className="mb-4">
-                <p className="text-gray-800">{post.content}</p>
-              </div>
-
-              <div className="grid grid-cols-4 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Likes
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    defaultValue={post.likes}
-                    onChange={(e) => updateEngagement(post.id, 'likes', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Retweets
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    defaultValue={post.retweets}
-                    onChange={(e) => updateEngagement(post.id, 'retweets', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Replies
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    defaultValue={post.replies}
-                    onChange={(e) => updateEngagement(post.id, 'replies', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Quotes
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    defaultValue={post.quotes}
-                    onChange={(e) => updateEngagement(post.id, 'quotes', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="flex space-x-4">
-                <button
-                  onClick={() => handleReview(
-                    post.id, 
-                    true, 
-                    engagementInputs[post.id] || {
-                      likes: post.likes,
-                      retweets: post.retweets,
-                      replies: post.replies,
-                      quotes: post.quotes
-                    }
-                  )}
-                  disabled={processing === post.id}
-                  className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 flex items-center"
-                >
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  {processing === post.id ? 'Processing...' : 'Approve'}
-                </button>
-                <button
-                  onClick={() => handleReview(post.id, false)}
-                  disabled={processing === post.id}
-                  className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50 flex items-center"
-                >
-                  <XCircle className="mr-2 h-4 w-4" />
-                  Reject
-                </button>
-              </div>
-
-              <div className="mt-3 p-3 bg-gray-50 rounded-md">
-                <p className="text-sm text-gray-600">
-                  <strong>Points Preview:</strong> {' '}
-                  {Math.max(
-                    ((engagementInputs[post.id]?.likes || post.likes) * 1) +
-                    ((engagementInputs[post.id]?.retweets || post.retweets) * 3) +
-                    ((engagementInputs[post.id]?.replies || post.replies) * 2) +
-                    ((engagementInputs[post.id]?.quotes || post.quotes) * 3),
-                    1
-                  )} points
-                </p>
-              </div>
-            </div>
-          ))}
+    <div className="min-h-screen bg-slate-950">
+      {/* Notifications */}
+      {showNewPostsNotification && (
+        <div className="fixed top-4 right-4 z-50 bg-emerald-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2 animate-slide-in-right">
+          <div className="h-2 w-2 bg-white rounded-full animate-pulse"></div>
+          <span className="font-medium">New posts available for review!</span>
         </div>
       )}
+      
+      {notification && (
+        <div className={`fixed top-16 right-4 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2 animate-slide-in-right ${
+          notification.type === 'success' 
+            ? 'bg-emerald-600 text-white' 
+            : 'bg-red-600 text-white'
+        }`}>
+          <span className="font-medium">{notification.message}</span>
+        </div>
+      )}
+      
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-50 mb-2">Admin Panel</h1>
+              <p className="text-slate-300">Review posts and manage payout system</p>
+              {lastRefresh && (
+                <p className="text-slate-400 text-sm mt-1">
+                  Last updated: {lastRefresh.toLocaleTimeString()}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => activeTab === 'posts' ? fetchPendingPosts() : fetchPayoutStatus()}
+                disabled={loading || refreshing || loadingPayoutStatus}
+                className="bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded-lg flex items-center space-x-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`h-4 w-4 ${(refreshing || loadingPayoutStatus) ? 'animate-spin' : ''}`} />
+                <span>{(refreshing || loadingPayoutStatus) ? 'Refreshing...' : 'Refresh'}</span>
+              </button>
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-4 py-2">
+                <div className="flex items-center text-emerald-400">
+                  <Shield className="h-5 w-5 mr-2" />
+                  <span className="text-sm font-medium">Creator Access</span>
+                  {(refreshing || loadingPayoutStatus) && (
+                    <div className="ml-2 h-2 w-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Tab Navigation */}
+          <div className="mt-6 border-b border-slate-700">
+            <nav className="flex space-x-8">
+              <button
+                onClick={() => setActiveTab('posts')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'posts'
+                    ? 'border-indigo-500 text-indigo-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-600'
+                }`}
+              >
+                <div className="flex items-center space-x-2">
+                  <Eye className="h-4 w-4" />
+                  <span>Post Reviews</span>
+                  {pendingPosts.length > 0 && (
+                    <span className="bg-indigo-500 text-white text-xs rounded-full px-2 py-1">
+                      {pendingPosts.length}
+                    </span>
+                  )}
+                </div>
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('payouts')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'payouts'
+                    ? 'border-indigo-500 text-indigo-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-600'
+                }`}
+              >
+                <div className="flex items-center space-x-2">
+                  <DollarSign className="h-4 w-4" />
+                  <span>Payout System</span>
+                </div>
+              </button>
+            </nav>
+          </div>
+        </div>
+
+        {activeTab === 'posts' ? (
+          // Posts Review Tab
+          pendingPosts.length === 0 ? (
+            <div className="bg-slate-900 border border-slate-700 rounded-xl p-12 text-center">
+              <Eye className="h-16 w-16 text-slate-400 mx-auto mb-6" />
+              <h3 className="text-xl font-semibold text-slate-50 mb-3">No posts pending review</h3>
+              <p className="text-slate-400">All submitted tweets have been processed.</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+            {pendingPosts.map((post) => (
+              <div key={post.id} className="bg-slate-900 border border-slate-700 rounded-xl p-8 shadow-professional">
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h3 className="font-semibold text-slate-50 text-lg">
+                      @{post.user.twitterHandle} ({post.user.name})
+                    </h3>
+                    <p className="text-sm text-slate-400">{post.user.email}</p>
+                    <p className="text-sm text-slate-400">
+                      Submitted: {new Date(post.tweetCreatedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <a 
+                    href={post.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-indigo-400 hover:text-indigo-300 transition-colors p-2 hover:bg-slate-800 rounded-lg"
+                  >
+                    <ExternalLink className="h-6 w-6" />
+                  </a>
+                </div>
+
+                <div className="mb-6">
+                  <div className="bg-slate-800 border border-slate-600 rounded-lg p-4">
+                    <p className="text-slate-200 leading-relaxed">{post.content}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-4 mb-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-300 mb-2">
+                      Likes
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      defaultValue={post.likes}
+                      onChange={(e) => updateEngagement(post.id, 'likes', parseInt(e.target.value) || 0)}
+                      className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-300 mb-2">
+                      Retweets
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      defaultValue={post.retweets}
+                      onChange={(e) => updateEngagement(post.id, 'retweets', parseInt(e.target.value) || 0)}
+                      className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-300 mb-2">
+                      Replies
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      defaultValue={post.replies}
+                      onChange={(e) => updateEngagement(post.id, 'replies', parseInt(e.target.value) || 0)}
+                      className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-300 mb-2">
+                      Quotes
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      defaultValue={post.quotes}
+                      onChange={(e) => updateEngagement(post.id, 'quotes', parseInt(e.target.value) || 0)}
+                      className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex space-x-4 mb-6">
+                  <button
+                    onClick={() => handleReview(
+                      post.id, 
+                      true, 
+                      engagementInputs[post.id] || {
+                        likes: post.likes,
+                        retweets: post.retweets,
+                        replies: post.replies,
+                        quotes: post.quotes
+                      }
+                    )}
+                    disabled={processing === post.id}
+                    className="bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center font-semibold transition-all duration-200 hover:scale-105 shadow-glow disabled:hover:scale-100"
+                  >
+                    <CheckCircle className="mr-2 h-5 w-5" />
+                    {processing === post.id ? 'Processing...' : 'Approve'}
+                  </button>
+                  <button
+                    onClick={() => handleReview(post.id, false)}
+                    disabled={processing === post.id}
+                    className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center font-semibold transition-all duration-200 hover:scale-105 shadow-glow disabled:hover:scale-100"
+                  >
+                    <XCircle className="mr-2 h-5 w-5" />
+                    Reject
+                  </button>
+                </div>
+
+                <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-4">
+                  <p className="text-sm text-indigo-300">
+                    <strong>Points Preview:</strong> {' '}
+                    {Math.max(
+                      ((engagementInputs[post.id]?.likes || post.likes) * 1) +
+                      ((engagementInputs[post.id]?.retweets || post.retweets) * 3) +
+                      ((engagementInputs[post.id]?.replies || post.replies) * 2) +
+                      ((engagementInputs[post.id]?.quotes || post.quotes) * 3),
+                      1
+                    )} points
+                  </p>
+                </div>
+              </div>
+            ))}
+            </div>
+          )
+        ) : (
+          // Payout System Tab
+          <div className="space-y-6">
+            {loadingPayoutStatus ? (
+              <div className="bg-slate-900 border border-slate-700 rounded-xl p-12 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+                <p className="text-slate-300 text-lg">Loading payout status...</p>
+              </div>
+            ) : payoutStatus ? (
+              <>
+                {/* System Status Cards */}
+                <div className="grid md:grid-cols-3 gap-6">
+                  <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 shadow-professional">
+                    <div className="flex items-center">
+                      <Wallet className="h-10 w-10 text-emerald-400" />
+                      <div className="ml-4">
+                        <p className="text-sm text-slate-400 font-medium">Wallet Balance</p>
+                        <p className="text-2xl font-bold text-slate-50">
+                          {payoutStatus.wallet.balance !== null 
+                            ? `${payoutStatus.wallet.balance.toFixed(4)} SOL`
+                            : 'Error'
+                          }
+                        </p>
+                        {payoutStatus.wallet.balanceError && (
+                          <p className="text-xs text-red-400 mt-1">{payoutStatus.wallet.balanceError}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 shadow-professional">
+                    <div className="flex items-center">
+                      <Users className="h-10 w-10 text-indigo-400" />
+                      <div className="ml-4">
+                        <p className="text-sm text-slate-400 font-medium">Users with Points</p>
+                        <p className="text-2xl font-bold text-slate-50">{payoutStatus.database.usersWithPoints}</p>
+                        <p className="text-xs text-slate-400">{payoutStatus.database.usersWithWallets} with wallets</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 shadow-professional">
+                    <div className="flex items-center">
+                      <Clock className="h-10 w-10 text-amber-400" />
+                      <div className="ml-4">
+                        <p className="text-sm text-slate-400 font-medium">Auto Payouts</p>
+                        <p className="text-lg font-bold text-slate-50">Every 10 min</p>
+                        <p className="text-xs text-slate-400">via Vercel cron</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Manual Trigger */}
+                <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 shadow-professional">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-50 mb-2">Manual Payout Trigger</h3>
+                      <p className="text-slate-400">Manually trigger a payout process for testing or immediate processing</p>
+                    </div>
+                    <button
+                      onClick={triggerManualPayout}
+                      disabled={triggeringPayout}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 hover:scale-105 shadow-glow disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    >
+                      {triggeringPayout ? 'Processing...' : 'Trigger Payout'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Payout Statistics */}
+                <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 shadow-professional">
+                  <h3 className="text-lg font-semibold text-slate-50 mb-4">Payout Statistics</h3>
+                  <div className="grid md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-slate-50">{payoutStatus.database.totalPayouts}</p>
+                      <p className="text-sm text-slate-400">Total Payouts</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-emerald-400">{payoutStatus.database.completedPayouts}</p>
+                      <p className="text-sm text-slate-400">Completed</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-amber-400">{payoutStatus.database.pendingPayouts}</p>
+                      <p className="text-sm text-slate-400">Pending</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-red-400">{payoutStatus.database.failedPayouts}</p>
+                      <p className="text-sm text-slate-400">Failed</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recent Activity */}
+                {payoutStatus.recentActivity.recentPayouts.length > 0 && (
+                  <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 shadow-professional">
+                    <h3 className="text-lg font-semibold text-slate-50 mb-4">Recent Payouts</h3>
+                    <div className="space-y-3">
+                      {payoutStatus.recentActivity.recentPayouts.slice(0, 5).map((payout: any) => (
+                        <div key={payout.id} className="flex items-center justify-between p-3 bg-slate-800 border border-slate-600 rounded-lg">
+                          <div>
+                            <p className="font-semibold text-slate-50">
+                              {payout.user?.name || 'Unknown'} (@{payout.user?.twitterHandle || 'unknown'})
+                            </p>
+                            <p className="text-sm text-slate-400">
+                              {new Date(payout.createdAt).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-slate-50">{payout.amount.toFixed(4)} SOL</p>
+                            <span className={`text-xs px-2 py-1 rounded-full ${
+                              payout.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400' :
+                              payout.status === 'PROCESSING' ? 'bg-amber-500/10 text-amber-400' :
+                              'bg-red-500/10 text-red-400'
+                            }`}>
+                              {payout.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="bg-slate-900 border border-slate-700 rounded-xl p-12 text-center">
+                <AlertTriangle className="h-16 w-16 text-red-400 mx-auto mb-6" />
+                <h3 className="text-xl font-semibold text-slate-50 mb-3">Failed to load payout status</h3>
+                <p className="text-slate-400">Please try refreshing the page.</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

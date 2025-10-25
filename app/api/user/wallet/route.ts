@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { PublicKey } from '@solana/web3.js';
 
@@ -18,13 +19,34 @@ function isValidSolanaAddress(address: string): boolean {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    console.log('=== WALLET API DEBUG ===');
+    console.log('Request headers:', Object.fromEntries(request.headers.entries()));
     
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const session = await getServerSession(authOptions);
+    console.log('Session data:', JSON.stringify(session, null, 2));
+    
+    if (!session) {
+      console.log('❌ No session found');
+      return NextResponse.json({ error: 'No session found' }, { status: 401 });
     }
+    
+    if (!session.user) {
+      console.log('❌ No user in session');
+      return NextResponse.json({ error: 'No user in session' }, { status: 401 });
+    }
+    
+    const userId = (session.user as any).id;
+    if (!userId) {
+      console.log('❌ No user ID in session');
+      return NextResponse.json({ error: 'No user ID in session' }, { status: 401 });
+    }
+    
+    console.log('✅ Session valid, user ID:', userId);
 
-    const { walletAddress } = await request.json();
+    const requestBody = await request.json();
+    console.log('Request body:', requestBody);
+    const { walletAddress } = requestBody;
+    console.log('Wallet address from request:', walletAddress);
 
     if (!walletAddress) {
       return NextResponse.json({ error: 'Wallet address is required' }, { status: 400 });
@@ -37,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     // Update user's wallet address
     const user = await prisma.user.update({
-      where: { email: session.user.email },
+      where: { id: userId },
       data: { walletAddress }
     });
 

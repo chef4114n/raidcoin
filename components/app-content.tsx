@@ -31,7 +31,9 @@ export function AppContent() {
   const checkWalletStatus = async () => {
     setIsCheckingWallet(true)
     try {
-      const response = await fetch('/api/user/wallet-status')
+      const response = await fetch('/api/user/wallet-status', {
+        credentials: 'include' // Include cookies for session
+      })
       if (response.ok) {
         const status = await response.json()
         setWalletStatus(status)
@@ -40,6 +42,8 @@ export function AppContent() {
         if (!status.hasWallet) {
           setShowWalletBinding(true)
         }
+      } else {
+        console.error('Wallet status check failed:', response.status)
       }
     } catch (error) {
       console.error('Error checking wallet status:', error)
@@ -57,10 +61,10 @@ export function AppContent() {
 
   if (status === 'loading' || isCheckingWallet) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+          <p className="text-slate-300 text-lg">Loading...</p>
         </div>
       </div>
     )
@@ -74,7 +78,7 @@ export function AppContent() {
   // Show wallet binding flow for authenticated users without wallet
   if (showWalletBinding || (walletStatus && !walletStatus.hasWallet)) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
+      <div className="min-h-screen bg-slate-950 py-8">
         <WalletBinding 
           onComplete={handleWalletBindingComplete}
           userWalletAddress={walletStatus?.walletAddress}

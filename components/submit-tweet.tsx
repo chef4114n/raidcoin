@@ -35,6 +35,13 @@ export function SubmitTweet({ onTweetSubmitted }: SubmitTweetProps) {
       if (response.ok) {
         setMessage(`✅ ${result.message}`)
         setTweetUrl('')
+        
+        // Trigger custom event for other components to listen
+        window.dispatchEvent(new CustomEvent('tweetSubmitted', { 
+          detail: { message: result.message, post: result.post } 
+        }))
+        
+        // Call parent callback
         onTweetSubmitted()
       } else {
         setMessage(`❌ ${result.error}`)
@@ -48,15 +55,15 @@ export function SubmitTweet({ onTweetSubmitted }: SubmitTweetProps) {
   }
 
   return (
-    <div className="bg-white rounded-lg p-6 shadow-sm mb-8">
-      <h2 className="text-xl font-bold mb-4 flex items-center">
-        <Plus className="mr-2" />
+    <div className="bg-slate-900 border border-slate-700 rounded-xl p-8 shadow-professional mb-8 animate-fade-in">
+      <h2 className="text-2xl font-bold mb-6 flex items-center text-slate-50">
+        <Plus className="mr-3 text-indigo-400" />
         Submit Your $RaidCoin Tweet
       </h2>
       
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-semibold text-slate-300 mb-3">
             Tweet URL
           </label>
           <input
@@ -64,10 +71,10 @@ export function SubmitTweet({ onTweetSubmitted }: SubmitTweetProps) {
             value={tweetUrl}
             onChange={(e) => setTweetUrl(e.target.value)}
             placeholder="https://twitter.com/username/status/1234567890"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-slate-50 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
             disabled={submitting}
           />
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-slate-400 mt-2 leading-relaxed">
             Paste the URL of your tweet that mentions $raidcoin, #raidcoin, or @raidcoin
           </p>
         </div>
@@ -75,24 +82,26 @@ export function SubmitTweet({ onTweetSubmitted }: SubmitTweetProps) {
         <button
           type="submit"
           disabled={submitting || !tweetUrl.trim()}
-          className="bg-primary-600 text-white px-6 py-2 rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+          className="bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center font-semibold transition-all duration-200 hover:scale-105 shadow-glow disabled:hover:scale-100"
         >
-          <Twitter className="mr-2 h-4 w-4" />
+          <Twitter className="mr-3 h-5 w-5" />
           {submitting ? 'Submitting...' : 'Submit Tweet'}
         </button>
 
         {message && (
-          <div className={`p-3 rounded-md ${
-            message.startsWith('✅') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+          <div className={`p-4 rounded-xl border ${
+            message.startsWith('✅') 
+              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' 
+              : 'bg-red-500/10 text-red-300 border-red-500/20'
           }`}>
             {message}
           </div>
         )}
       </form>
 
-      <div className="mt-6 p-4 bg-blue-50 rounded-md">
-        <h3 className="font-medium text-blue-800 mb-2">How to Get Your Tweet URL:</h3>
-        <ol className="text-sm text-blue-700 space-y-1">
+      <div className="mt-8 p-6 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
+        <h3 className="font-semibold text-indigo-200 mb-4">How to Get Your Tweet URL:</h3>
+        <ol className="text-sm text-indigo-300 space-y-2 leading-relaxed">
           <li>1. Post a tweet mentioning $raidcoin, #raidcoin, or @raidcoin</li>
           <li>2. Click on your tweet to open it</li>
           <li>3. Copy the URL from your browser's address bar</li>
@@ -100,15 +109,15 @@ export function SubmitTweet({ onTweetSubmitted }: SubmitTweetProps) {
         </ol>
       </div>
 
-      <div className="mt-4 p-4 bg-yellow-50 rounded-md">
-        <h3 className="font-medium text-yellow-800 mb-2">📊 Point System:</h3>
-        <div className="text-sm text-yellow-700 grid grid-cols-2 gap-2">
-          <div>❤️ Likes: 1 point each</div>
-          <div>🔄 Retweets: 3 points each</div>
-          <div>💬 Replies: 2 points each</div>
-          <div>🔗 Quotes: 3 points each</div>
+      <div className="mt-6 p-6 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+        <h3 className="font-semibold text-amber-200 mb-4">📊 Point System:</h3>
+        <div className="text-sm text-amber-300 grid grid-cols-2 gap-3">
+          <div className="flex items-center">❤️ Likes: <span className="font-semibold ml-1">1 point each</span></div>
+          <div className="flex items-center">🔄 Retweets: <span className="font-semibold ml-1">3 points each</span></div>
+          <div className="flex items-center">💬 Replies: <span className="font-semibold ml-1">2 points each</span></div>
+          <div className="flex items-center">🔗 Quotes: <span className="font-semibold ml-1">3 points each</span></div>
         </div>
-        <p className="text-sm text-yellow-700 mt-2">
+        <p className="text-sm text-amber-300 mt-4 leading-relaxed">
           💡 Tip: Engage with the community to maximize your points!
         </p>
       </div>
