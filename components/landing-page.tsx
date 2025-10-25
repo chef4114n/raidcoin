@@ -2,9 +2,16 @@
 
 import React from 'react'
 import { signIn } from 'next-auth/react'
-import { Twitter, Coins, TrendingUp, Users, Zap, ArrowRight, Star, DollarSign } from 'lucide-react'
+import { Twitter, Coins, TrendingUp, Users, Zap, ArrowRight, Star, DollarSign, Copy, ExternalLink } from 'lucide-react'
 
 export function LandingPage() {
+  const contractAddress = "61QMuj4oqqNsStRx1KPWuV5uvvYWpkvUdtNHG8u6pump"
+  
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    // You could add a toast notification here
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 overflow-hidden">
       {/* Background Effects */}
@@ -52,9 +59,26 @@ export function LandingPage() {
             </p>
 
             {/* Token Requirement Notice */}
-            <div className="inline-flex items-center space-x-2 bg-amber-500/10 border border-amber-500/20 rounded-full px-6 py-3 mb-12">
+            <div className="inline-flex items-center space-x-2 bg-amber-500/10 border border-amber-500/20 rounded-full px-6 py-3 mb-8">
               <Coins className="h-5 w-5 text-amber-400" />
               <span className="text-amber-300 font-medium">Requires 500k+ RaidCoin tokens to participate</span>
+            </div>
+
+            {/* Contract Address Display */}
+            <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 mb-12 max-w-2xl mx-auto">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold text-white mb-4">RaidCoin Contract Address</h3>
+                <div className="flex items-center justify-center space-x-3 bg-slate-900/50 rounded-xl p-4">
+                  <code className="text-sm text-indigo-300 font-mono break-all">{contractAddress}</code>
+                  <button
+                    onClick={() => copyToClipboard(contractAddress)}
+                    className="p-2 hover:bg-slate-700 rounded-lg transition-colors group"
+                    title="Copy to clipboard"
+                  >
+                    <Copy className="h-4 w-4 text-slate-400 group-hover:text-white" />
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* CTA Buttons */}
@@ -67,6 +91,17 @@ export function LandingPage() {
                 <span>Start Earning Now</span>
                 <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
               </button>
+              
+              <a
+                href={`https://pump.fun/coin/${contractAddress}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-12 py-6 rounded-2xl text-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-2xl hover:shadow-emerald-500/25 flex items-center space-x-3"
+              >
+                <Coins className="h-6 w-6" />
+                <span>Buy RaidCoin</span>
+                <ExternalLink className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
+              </a>
             </div>
 
             {/* Trust Indicators */}
@@ -258,14 +293,27 @@ export function LandingPage() {
               Join the RaidCoin community today and turn your social media activity into real cryptocurrency rewards.
             </p>
             
-            <button
-              onClick={() => signIn('twitter')}
-              className="group bg-gradient-to-r from-indigo-600 via-purple-600 to-emerald-600 hover:from-indigo-700 hover:via-purple-700 hover:to-emerald-700 text-white px-16 py-6 rounded-3xl text-2xl font-bold transition-all duration-300 transform hover:scale-105 shadow-2xl hover:shadow-indigo-500/25 flex items-center space-x-4 mx-auto"
-            >
-              <Twitter className="h-8 w-8" />
-              <span>Start Earning Now</span>
-              <ArrowRight className="h-8 w-8 group-hover:translate-x-2 transition-transform" />
-            </button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-12">
+              <button
+                onClick={() => signIn('twitter')}
+                className="group bg-gradient-to-r from-indigo-600 via-purple-600 to-emerald-600 hover:from-indigo-700 hover:via-purple-700 hover:to-emerald-700 text-white px-16 py-6 rounded-3xl text-2xl font-bold transition-all duration-300 transform hover:scale-105 shadow-2xl hover:shadow-indigo-500/25 flex items-center space-x-4"
+              >
+                <Twitter className="h-8 w-8" />
+                <span>Start Earning Now</span>
+                <ArrowRight className="h-8 w-8 group-hover:translate-x-2 transition-transform" />
+              </button>
+              
+              <a
+                href={`https://pump.fun/coin/${contractAddress}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-16 py-6 rounded-3xl text-2xl font-bold transition-all duration-300 transform hover:scale-105 shadow-2xl hover:shadow-emerald-500/25 flex items-center space-x-4"
+              >
+                <Coins className="h-8 w-8" />
+                <span>Buy RaidCoin</span>
+                <ExternalLink className="h-8 w-8 group-hover:translate-x-2 transition-transform" />
+              </a>
+            </div>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-8 mt-12 text-slate-400">
               <div className="flex items-center space-x-2">

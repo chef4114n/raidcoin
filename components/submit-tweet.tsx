@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Twitter, Plus, ExternalLink } from 'lucide-react'
+import { Twitter, Plus, ExternalLink, Coins } from 'lucide-react'
 import { TokenBalanceChecker } from './token-balance-checker'
 import { useTokenBalance } from '../hooks/use-token-balance'
 
@@ -144,10 +144,20 @@ export function SubmitTweet({ onTweetSubmitted }: SubmitTweetProps) {
         {!hasEnoughTokens && (
           <div className="mt-6 p-6 bg-red-500/10 border border-red-500/20 rounded-xl">
             <h3 className="font-semibold text-red-200 mb-4">🔒 Token Requirement:</h3>
-            <p className="text-sm text-red-300 leading-relaxed">
+            <p className="text-sm text-red-300 leading-relaxed mb-4">
               You need to hold at least <strong>500,000 RaidCoin tokens</strong> in your connected wallet to submit tweets and earn rewards. 
               This requirement helps ensure quality participation in our community.
             </p>
+            <a
+              href={`https://pump.fun/coin/${process.env.NEXT_PUBLIC_RAIDCOIN_TOKEN_MINT || '61QMuj4oqqNsStRx1KPWuV5uvvYWpkvUdtNHG8u6pump'}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-4 py-2 rounded-lg transition-all duration-200 font-medium"
+            >
+              <Coins className="h-4 w-4" />
+              <span>Buy RaidCoin Now</span>
+              <ExternalLink className="h-4 w-4" />
+            </a>
           </div>
         )}
       </div>

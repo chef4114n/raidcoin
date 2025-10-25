@@ -1,5 +1,5 @@
 import React from 'react';
-import { Coins, Shield, AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
+import { Coins, Shield, AlertTriangle, Loader2, RefreshCw, ExternalLink } from 'lucide-react';
 import { useTokenBalance } from '../hooks/use-token-balance';
 
 interface TokenBalanceCheckerProps {
@@ -93,6 +93,18 @@ export function TokenBalanceChecker({ className = '' }: TokenBalanceCheckerProps
           <p className="text-amber-300 text-sm mt-1">
             You need {(minimumRequired - balance).toLocaleString()} more tokens to submit tweets.
           </p>
+          <div className="mt-3">
+            <a
+              href={`https://pump.fun/coin/${process.env.NEXT_PUBLIC_RAIDCOIN_TOKEN_MINT || '61QMuj4oqqNsStRx1KPWuV5uvvYWpkvUdtNHG8u6pump'}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-4 py-2 rounded-lg transition-all duration-200 font-medium"
+            >
+              <Coins className="h-4 w-4" />
+              <span>Buy RaidCoin</span>
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          </div>
         </div>
       )}
       
