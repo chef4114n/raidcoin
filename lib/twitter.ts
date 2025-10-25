@@ -63,7 +63,7 @@ class TwitterAPI {
     sinceId?: string;
   } = {}): Promise<TwitterApiResponse> {
     const {
-      query = '$raidcoin OR #raidcoin OR @raidcoin',
+      query = '$raidcoin OR #raidcoin OR @xraidcoin',
       maxResults = 100,
       nextToken,
       sinceId

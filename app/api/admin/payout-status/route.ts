@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
       prisma.processingLog.findMany({
         where: { type: 'payout_process' },
         take: 10,
-        orderBy: { createdAt: 'desc' }
+        orderBy: { startedAt: 'desc' }
       })
     ]);
 
