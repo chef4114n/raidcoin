@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { useSession } from 'next-auth/react';
 
 interface TokenBalanceResult {
   balance: number;
@@ -16,7 +16,7 @@ const balanceCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_DURATION = 30000; // 30 seconds
 
 export function useTokenBalance(): TokenBalanceResult & { checkBalance: () => Promise<void> } {
-  const { publicKey, connected } = useWallet();
+  const { data: session } = useSession();
   const [balance, setBalance] = useState(0);
   const [hasEnoughTokens, setHasEnoughTokens] = useState(false);
   const [minimumRequired, setMinimumRequired] = useState(500000);
@@ -24,16 +24,39 @@ export function useTokenBalance(): TokenBalanceResult & { checkBalance: () => Pr
   const [minimumFormatted, setMinimumFormatted] = useState('500,000');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+
+  // Get wallet address from user profile
+  useEffect(() => {
+    const fetchWalletAddress = async () => {
+      if (!session?.user) {
+        setWalletAddress(null);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/user/wallet-status');
+        if (response.ok) {
+          const data = await response.json();
+          setWalletAddress(data.walletAddress);
+        }
+      } catch (error) {
+        console.error('Error fetching wallet address:', error);
+        setWalletAddress(null);
+      }
+    };
+
+    fetchWalletAddress();
+  }, [session]);
 
   const checkBalance = useCallback(async () => {
-    if (!connected || !publicKey) {
+    if (!session?.user || !walletAddress) {
       setBalance(0);
       setHasEnoughTokens(false);
       setError(null);
+      setIsLoading(false);
       return;
     }
-
-    const walletAddress = publicKey.toString();
     
     // Check cache first
     const cached = balanceCache.get(walletAddress);
@@ -95,11 +118,11 @@ export function useTokenBalance(): TokenBalanceResult & { checkBalance: () => Pr
     } finally {
       setIsLoading(false);
     }
-  }, [connected, publicKey]);
+  }, [session, walletAddress]);
 
-  // Check balance when wallet connects or changes, but with debouncing
+  // Check balance when wallet address changes, but with debouncing
   useEffect(() => {
-    if (connected && publicKey) {
+    if (session?.user && walletAddress) {
       const timer = setTimeout(() => {
         checkBalance();
       }, 500); // 500ms debounce
@@ -110,7 +133,7 @@ export function useTokenBalance(): TokenBalanceResult & { checkBalance: () => Pr
       setHasEnoughTokens(false);
       setError(null);
     }
-  }, [connected, publicKey, checkBalance]);
+  }, [session, walletAddress, checkBalance]);
 
   return {
     balance,
