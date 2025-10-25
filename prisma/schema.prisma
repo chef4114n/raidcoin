@@ -1,0 +1,167 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  
+  // Twitter specific fields
+  twitterId     String?   @unique
+  twitterHandle String?   @unique
+  
+  // Solana wallet
+  walletAddress String?
+  
+  // Points and rewards
+  totalPoints   Int       @default(0)
+  totalEarned   Float     @default(0)
+  
+  // Timestamps
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  posts         Post[]
+  pointHistory  PointHistory[]
+  payouts       Payout[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Post {
+  id          String   @id @default(cuid())
+  tweetId     String   @unique
+  userId      String
+  content     String   @db.Text
+  authorHandle String
+  authorName  String
+  authorImage String?
+  
+  // Engagement metrics
+  likes       Int      @default(0)
+  retweets    Int      @default(0)
+  replies     Int      @default(0)
+  quotes      Int      @default(0)
+  
+  // Points calculation
+  pointsAwarded Int    @default(0)
+  lastProcessed DateTime?
+  
+  // Metadata
+  url         String
+  createdAt   DateTime @default(now())
+  tweetCreatedAt DateTime
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pointHistory PointHistory[]
+}
+
+model PointHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  postId      String?
+  points      Int
+  reason      String   // "tweet_engagement", "manual_adjustment", etc.
+  description String?
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post        Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
+}
+
+model Payout {
+  id              String    @id @default(cuid())
+  userId          String
+  amount          Float
+  solanaAmount    Float     // Amount in SOL
+  txSignature     String?   @unique
+  status          PayoutStatus @default(PENDING)
+  
+  // Period information
+  periodStart     DateTime
+  periodEnd       DateTime
+  totalPoints     Int       // User's points for this period
+  totalPoolPoints Int       // Total points across all users for this period
+  creatorFee      Float     // Creator fee taken from this payout
+  
+  createdAt       DateTime  @default(now())
+  processedAt     DateTime?
+  
+  // Relations
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model SystemConfig {
+  id                    String   @id @default(cuid())
+  key                   String   @unique
+  value                 String
+  description           String?
+  updatedAt             DateTime @updatedAt
+}
+
+model ProcessingLog {
+  id            String   @id @default(cuid())
+  type          String   // "tweet_fetch", "point_calculation", "payout_process"
+  status        String   // "started", "completed", "failed"
+  message       String?
+  data          Json?    // Additional data about the process
+  startedAt     DateTime @default(now())
+  completedAt   DateTime?
+  duration      Int?     // Duration in milliseconds
+}

@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/fetch-tweets",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/calculate-points", 
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/process-payouts",
+      "schedule": "*/10 * * * *"
+    }
+  ]
+}
