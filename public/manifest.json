@@ -1,0 +1,24 @@
+{
+  "name": "raidcoin",
+  "short_name": "raidcoin",
+  "description": "Earn SOL by tweeting about raidcoin. Turn your social media activity into real cryptocurrency rewards.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/raidcoin-logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/raidcoin-logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["finance", "social", "utilities"],
+  "lang": "en"
+}

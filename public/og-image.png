@@ -1,0 +1,34 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#0f172a"/>
+  
+  <!-- Gradient overlay -->
+  <defs>
+    <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:0.2" />
+      <stop offset="50%" style="stop-color:#8b5cf6;stop-opacity:0.2" />
+      <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:0.2" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#gradient1)"/>
+  
+  <!-- Main content -->
+  <text x="600" y="200" font-family="Arial, sans-serif" font-size="64" font-weight="bold" text-anchor="middle" fill="white">raidcoin</text>
+  
+  <!-- Subtitle -->
+  <text x="600" y="280" font-family="Arial, sans-serif" font-size="32" text-anchor="middle" fill="#94a3b8">Turn Your Tweets Into SOL</text>
+  
+  <!-- Description -->
+  <text x="600" y="360" font-family="Arial, sans-serif" font-size="24" text-anchor="middle" fill="#64748b">Earn Solana rewards for posting about $raidcoin</text>
+  <text x="600" y="400" font-family="Arial, sans-serif" font-size="24" text-anchor="middle" fill="#64748b">Automatic payouts every 10 minutes</text>
+  
+  <!-- Call to action -->
+  <rect x="450" y="460" width="300" height="60" rx="30" fill="#6366f1"/>
+  <text x="600" y="500" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="white">Get Started</text>
+  
+  <!-- Decorative elements -->
+  <circle cx="200" cy="150" r="40" fill="#6366f1" opacity="0.3"/>
+  <circle cx="1000" cy="200" r="60" fill="#8b5cf6" opacity="0.3"/>
+  <circle cx="150" cy="450" r="30" fill="#06b6d4" opacity="0.3"/>
+  <circle cx="1050" cy="480" r="45" fill="#10b981" opacity="0.3"/>
+</svg>

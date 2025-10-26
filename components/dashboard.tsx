@@ -166,6 +166,12 @@ export function Dashboard() {
               </h1>
             </div>
             <div className="flex items-center space-x-4">
+              <a
+                href="/docs"
+                className="text-slate-400 hover:text-indigo-300 transition-colors text-sm font-medium"
+              >
+                Documentation
+              </a>
               <button
                 onClick={() => fetchUserData()}
                 disabled={loading || refreshing}
