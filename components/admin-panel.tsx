@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
-import { CheckCircle, XCircle, ExternalLink, Eye, Shield, Wallet, AlertTriangle, RefreshCw, DollarSign, Clock, Users } from 'lucide-react'
+import { CheckCircle, XCircle, ExternalLink, Eye, Shield, Wallet, AlertTriangle, RefreshCw, DollarSign, Clock, Users, TrendingUp, Star } from 'lucide-react'
 
 interface PendingPost {
   id: string
@@ -72,10 +72,12 @@ export function AdminPanel() {
   const [showNewPostsNotification, setShowNewPostsNotification] = useState(false)
   const [previousPostCount, setPreviousPostCount] = useState(0)
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null)
-  const [activeTab, setActiveTab] = useState<'posts' | 'payouts'>('posts')
+  const [activeTab, setActiveTab] = useState<'posts' | 'payouts' | 'raiders'>('posts')
   const [payoutStatus, setPayoutStatus] = useState<PayoutStatus | null>(null)
   const [loadingPayoutStatus, setLoadingPayoutStatus] = useState(false)
   const [triggeringPayout, setTriggeringPayout] = useState(false)
+  const [raidersData, setRaidersData] = useState<any[]>([])
+  const [loadingRaiders, setLoadingRaiders] = useState(false)
 
   const showNotification = (message: string, type: 'success' | 'error') => {
     setNotification({ message, type })
@@ -94,6 +96,21 @@ export function AdminPanel() {
       console.error('Error fetching payout status:', error)
     } finally {
       setLoadingPayoutStatus(false)
+    }
+  }, [])
+
+  const fetchRaidersBreakdown = useCallback(async () => {
+    setLoadingRaiders(true)
+    try {
+      const response = await fetch('/api/admin/raiders-breakdown')
+      if (response.ok) {
+        const result = await response.json()
+        setRaidersData(result.raiders)
+      }
+    } catch (error) {
+      console.error('Error fetching raiders breakdown:', error)
+    } finally {
+      setLoadingRaiders(false)
     }
   }, [])
 
@@ -191,8 +208,10 @@ export function AdminPanel() {
   useEffect(() => {
     if (activeTab === 'payouts' && adminAuth?.isAdmin) {
       fetchPayoutStatus()
+    } else if (activeTab === 'raiders' && adminAuth?.isAdmin) {
+      fetchRaidersBreakdown()
     }
-  }, [activeTab, adminAuth, fetchPayoutStatus])
+  }, [activeTab, adminAuth, fetchPayoutStatus, fetchRaidersBreakdown])
 
   const checkAdminAuth = async () => {
     setCheckingAuth(true)
@@ -387,12 +406,16 @@ export function AdminPanel() {
             </div>
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => activeTab === 'posts' ? fetchPendingPosts() : fetchPayoutStatus()}
-                disabled={loading || refreshing || loadingPayoutStatus}
+                onClick={() => {
+                  if (activeTab === 'posts') fetchPendingPosts()
+                  else if (activeTab === 'payouts') fetchPayoutStatus()
+                  else if (activeTab === 'raiders') fetchRaidersBreakdown()
+                }}
+                disabled={loading || refreshing || loadingPayoutStatus || loadingRaiders}
                 className="bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded-lg flex items-center space-x-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <RefreshCw className={`h-4 w-4 ${(refreshing || loadingPayoutStatus) ? 'animate-spin' : ''}`} />
-                <span>{(refreshing || loadingPayoutStatus) ? 'Refreshing...' : 'Refresh'}</span>
+                <RefreshCw className={`h-4 w-4 ${(refreshing || loadingPayoutStatus || loadingRaiders) ? 'animate-spin' : ''}`} />
+                <span>{(refreshing || loadingPayoutStatus || loadingRaiders) ? 'Refreshing...' : 'Refresh'}</span>
               </button>
               <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-4 py-2">
                 <div className="flex items-center text-emerald-400">
@@ -439,6 +462,20 @@ export function AdminPanel() {
                 <div className="flex items-center space-x-2">
                   <DollarSign className="h-4 w-4" />
                   <span>Payout System</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('raiders')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'raiders'
+                    ? 'border-indigo-500 text-indigo-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-600'
+                }`}
+              >
+                <div className="flex items-center space-x-2">
+                  <Users className="h-4 w-4" />
+                  <span>Raiders Breakdown</span>
                 </div>
               </button>
             </nav>
@@ -578,7 +615,7 @@ export function AdminPanel() {
             ))}
             </div>
           )
-        ) : (
+        ) : activeTab === 'payouts' ? (
           // Payout System Tab
           <div className="space-y-6">
             {loadingPayoutStatus ? (
@@ -624,7 +661,7 @@ export function AdminPanel() {
                       <Clock className="h-10 w-10 text-amber-400" />
                       <div className="ml-4">
                         <p className="text-sm text-slate-400 font-medium">Auto Payouts</p>
-                        <p className="text-lg font-bold text-slate-50">Every 10 min</p>
+                        <p className="text-lg font-bold text-slate-50">Every 30 min</p>
                         <p className="text-xs text-slate-400">via Vercel cron</p>
                       </div>
                     </div>
@@ -707,6 +744,146 @@ export function AdminPanel() {
                 <AlertTriangle className="h-16 w-16 text-red-400 mx-auto mb-6" />
                 <h3 className="text-xl font-semibold text-slate-50 mb-3">Failed to load payout status</h3>
                 <p className="text-slate-400">Please try refreshing the page.</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          // Raiders Breakdown Tab
+          <div className="space-y-6">
+            {loadingRaiders ? (
+              <div className="bg-slate-900 border border-slate-700 rounded-xl p-12 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+                <p className="text-slate-300 text-lg">Loading raiders breakdown...</p>
+              </div>
+            ) : raidersData.length > 0 ? (
+              <>
+                {/* Summary Cards */}
+                <div className="grid md:grid-cols-4 gap-6">
+                  <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 shadow-professional">
+                    <div className="flex items-center">
+                      <Users className="h-10 w-10 text-emerald-400" />
+                      <div className="ml-4">
+                        <p className="text-sm text-slate-400 font-medium">Total Raiders</p>
+                        <p className="text-2xl font-bold text-slate-50">{raidersData.length}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 shadow-professional">
+                    <div className="flex items-center">
+                      <TrendingUp className="h-10 w-10 text-indigo-400" />
+                      <div className="ml-4">
+                        <p className="text-sm text-slate-400 font-medium">Total Points</p>
+                        <p className="text-2xl font-bold text-slate-50">
+                          {raidersData.reduce((sum, raider) => sum + raider.totalPoints, 0).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 shadow-professional">
+                    <div className="flex items-center">
+                      <DollarSign className="h-10 w-10 text-amber-400" />
+                      <div className="ml-4">
+                        <p className="text-sm text-slate-400 font-medium">Total SOL Earned</p>
+                        <p className="text-2xl font-bold text-slate-50">
+                          {raidersData.reduce((sum, raider) => sum + raider.totalEarned, 0).toFixed(4)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 shadow-professional">
+                    <div className="flex items-center">
+                      <Star className="h-10 w-10 text-purple-400" />
+                      <div className="ml-4">
+                        <p className="text-sm text-slate-400 font-medium">Avg SOL/Raider</p>
+                        <p className="text-2xl font-bold text-slate-50">
+                          {(raidersData.reduce((sum, raider) => sum + raider.totalEarned, 0) / raidersData.length).toFixed(4)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Raiders List */}
+                <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 shadow-professional">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-semibold text-slate-50">Raiders Breakdown</h3>
+                    <div className="text-sm text-slate-400">
+                      Showing top {Math.min(raidersData.length, 50)} raiders
+                    </div>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-slate-700">
+                          <th className="text-left py-3 px-4 text-slate-300 font-medium">Rank</th>
+                          <th className="text-left py-3 px-4 text-slate-300 font-medium">Raider</th>
+                          <th className="text-right py-3 px-4 text-slate-300 font-medium">Total Points</th>
+                          <th className="text-right py-3 px-4 text-slate-300 font-medium">SOL Earned</th>
+                          <th className="text-right py-3 px-4 text-slate-300 font-medium">Tweets</th>
+                          <th className="text-right py-3 px-4 text-slate-300 font-medium">Last Active</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {raidersData.slice(0, 50).map((raider, index) => (
+                          <tr key={raider.id} className="border-b border-slate-800 hover:bg-slate-800/50 transition-colors">
+                            <td className="py-4 px-4">
+                              <div className="flex items-center">
+                                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
+                                  index === 0 ? 'bg-yellow-500/20 text-yellow-400' :
+                                  index === 1 ? 'bg-gray-500/20 text-gray-400' :
+                                  index === 2 ? 'bg-orange-500/20 text-orange-400' :
+                                  'bg-slate-700 text-slate-300'
+                                }`}>
+                                  #{index + 1}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-4 px-4">
+                              <div>
+                                <p className="font-semibold text-slate-50">
+                                  {raider.name || 'Unknown'}
+                                </p>
+                                <p className="text-sm text-slate-400">
+                                  @{raider.twitterHandle || 'unknown'}
+                                </p>
+                              </div>
+                            </td>
+                            <td className="py-4 px-4 text-right">
+                              <span className="font-semibold text-indigo-400">
+                                {raider.totalPoints.toLocaleString()}
+                              </span>
+                            </td>
+                            <td className="py-4 px-4 text-right">
+                              <span className="font-semibold text-emerald-400">
+                                {raider.totalEarned.toFixed(4)} SOL
+                              </span>
+                            </td>
+                            <td className="py-4 px-4 text-right">
+                              <span className="text-slate-300">
+                                {raider.tweetCount}
+                              </span>
+                            </td>
+                            <td className="py-4 px-4 text-right">
+                              <span className="text-slate-400 text-sm">
+                                {raider.lastActive ? new Date(raider.lastActive).toLocaleDateString() : 'N/A'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="bg-slate-900 border border-slate-700 rounded-xl p-12 text-center">
+                <Users className="h-16 w-16 text-slate-400 mx-auto mb-6" />
+                <h3 className="text-xl font-semibold text-slate-50 mb-3">No raiders data available</h3>
+                <p className="text-slate-400">No raiders have earned points yet.</p>
               </div>
             )}
           </div>
