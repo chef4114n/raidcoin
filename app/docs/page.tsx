@@ -4,7 +4,7 @@ import React from 'react'
 import { Twitter, Coins, TrendingUp, Users, Zap, ArrowRight, Star, DollarSign, Copy, ExternalLink, Shield, AlertTriangle, CheckCircle } from 'lucide-react'
 
 export default function DocsPage() {
-  const contractAddress = "61QMuj4oqqNsStRx1KPWuV5uvvYWpkvUdtNHG8u6pump"
+  const contractAddress = process.env.NEXT_PUBLIC_RAIDCOIN_TOKEN_MINT
   
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
@@ -67,7 +67,7 @@ export default function DocsPage() {
               </p>
               <p>
                 Our platform tracks your tweets that mention $raidcoin, #raidcoin, or @raidcoin, calculates points based on engagement metrics, 
-                and automatically distributes SOL rewards every 30 minutes based on your contribution to the community.
+                and automatically distributes SOL rewards every 10 minutes based on your contribution to the community.
               </p>
               <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3 md:p-4 mt-4 md:mt-6">
                 <div className="flex items-start space-x-2 md:space-x-3">
@@ -316,7 +316,7 @@ export default function DocsPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 md:p-6 text-center">
-                  <div className="text-2xl md:text-3xl font-bold text-green-300 mb-2">Every 30 Minutes</div>
+                  <div className="text-2xl md:text-3xl font-bold text-green-300 mb-2">Every 10 Minutes</div>
                   <h4 className="font-bold text-green-200 mb-2 text-sm md:text-base">Payout Frequency</h4>
                   <p className="text-green-400 text-xs md:text-sm">Automatic SOL distribution based on your points</p>
                 </div>
@@ -339,7 +339,7 @@ export default function DocsPage() {
                 <div className="space-y-3 md:space-y-4 text-slate-300 text-sm md:text-base">
                   <div className="flex items-start space-x-3">
                     <div className="bg-indigo-600 rounded-full w-1.5 h-1.5 md:w-2 md:h-2 mt-2"></div>
-                    <p><strong>Point Calculation:</strong> Every 30 minutes, our system calculates total points earned by all participants</p>
+                    <p><strong>Point Calculation:</strong> Every 10 minutes, our system calculates total points earned by all participants</p>
                   </div>
                   <div className="flex items-start space-x-3">
                     <div className="bg-indigo-600 rounded-full w-1.5 h-1.5 md:w-2 md:h-2 mt-2"></div>
@@ -531,7 +531,7 @@ export default function DocsPage() {
               <div className="bg-slate-800 rounded-lg p-4 md:p-6">
                 <h3 className="text-lg md:text-xl font-bold mb-3 text-blue-200">How often are rewards distributed?</h3>
                 <p className="text-slate-300 text-sm md:text-base">
-                  Rewards are automatically calculated and distributed every 30 minutes. You don't need to claim anything - 
+                  Rewards are automatically calculated and distributed every 10 minutes. You don't need to claim anything - 
                   SOL is sent directly to your connected wallet address.
                 </p>
               </div>

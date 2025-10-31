@@ -7,10 +7,6 @@
     {
       "path": "/api/calculate-points", 
       "schedule": "*/10 * * * *"
-    },
-    {
-      "path": "/api/process-payouts",
-      "schedule": "*/10 * * * *"
     }
   ]
 }

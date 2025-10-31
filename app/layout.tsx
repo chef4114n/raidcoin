@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'raidcoin Rewards - Earn SOL for $raidcoin Posts',
-  description: 'Earn Solana rewards for posting about $raidcoin on Twitter. Join thousands of raiders earning real SOL through social media engagement. Automatic payouts every 30 minutes.',
+  description: 'Earn Solana rewards for posting about $raidcoin on Twitter. Join thousands of raiders earning real SOL through social media engagement. Automatic payouts every 10 minutes.',
   keywords: ['raidcoin', 'solana', 'rewards', 'twitter', 'crypto', 'earnings', 'sol', 'blockchain', 'social media'],
   authors: [{ name: 'raidcoin Team' }],
   creator: 'raidcoin',
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     url: 'https://www.raidcoin.live',
     siteName: 'raidcoin Rewards',
     title: 'raidcoin Rewards - Earn SOL for $raidcoin Posts',
-    description: 'Earn Solana rewards for posting about $raidcoin on Twitter. Join thousands of raiders earning real SOL through social media engagement. Automatic payouts every 30 minutes.',
+    description: 'Earn Solana rewards for posting about $raidcoin on Twitter. Join thousands of raiders earning real SOL through social media engagement. Automatic payouts every 10 minutes.',
     images: [
       {
         url: '/raidcoin-banner.png',
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'raidcoin Rewards - Earn SOL for $raidcoin Posts',
-    description: 'Earn Solana rewards for posting about $raidcoin on Twitter. Automatic payouts every 30 minutes.',
+    description: 'Earn Solana rewards for posting about $raidcoin on Twitter. Automatic payouts every 10 minutes.',
     images: ['/raidcoin-banner.png'],
     creator: '@xraidcoin',
     site: '@xraidcoin',

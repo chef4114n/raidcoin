@@ -4,6 +4,11 @@ import { Connection, PublicKey } from '@solana/web3.js';
 const RAIDCOIN_MINT = process.env.RAIDCOIN_TOKEN_MINT || '61QMuj4oqqNsStRx1KPWuV5uvvYWpkvUdtNHG8u6pump';
 const MINIMUM_TOKENS = 500000; // 500k tokens
 
+// Wallets excluded from minimum token requirement
+const EXCLUDED_WALLETS = [
+  '4J2SZMhWjzx2WJrhEwtBFnL49rNK6JpSy1NLzhvfr2xB'
+];
+
 // Multiple RPC endpoints for fallback
 const RPC_ENDPOINTS = [
   process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com',
@@ -122,7 +127,11 @@ export async function POST(request: NextRequest) {
       const actualBalance = totalBalance / Math.pow(10, decimals);
       console.log('Actual balance:', actualBalance);
 
-      const hasEnoughTokens = actualBalance >= MINIMUM_TOKENS;
+      // Check if wallet is excluded from minimum token requirement
+      const isExcludedWallet = EXCLUDED_WALLETS.includes(walletAddress);
+      console.log('Wallet excluded from minimum requirement:', isExcludedWallet);
+
+      const hasEnoughTokens = isExcludedWallet || actualBalance >= MINIMUM_TOKENS;
 
       return NextResponse.json({
         success: true,
@@ -131,15 +140,21 @@ export async function POST(request: NextRequest) {
         minimumRequired: MINIMUM_TOKENS,
         balanceFormatted: actualBalance.toLocaleString(),
         minimumFormatted: MINIMUM_TOKENS.toLocaleString(),
+        isExcluded: isExcludedWallet,
         debug: {
           rawBalance: totalBalance,
           decimals,
-          tokenAccountsFound: tokenAccounts.value.length
+          tokenAccountsFound: tokenAccounts.value.length,
+          walletExcluded: isExcludedWallet
         }
       });
 
     } catch (walletError) {
       console.error('Error checking wallet balance:', walletError);
+      
+      // Check if wallet is excluded from minimum token requirement even on error
+      const isExcludedWallet = EXCLUDED_WALLETS.includes(walletAddress);
+      console.log('Wallet excluded from minimum requirement (error case):', isExcludedWallet);
       
       // Provide more specific error messages
       let errorMessage = 'Unable to check wallet balance';
@@ -160,12 +175,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: false,
         balance: 0,
-        hasEnoughTokens: false,
+        hasEnoughTokens: isExcludedWallet, // Allow excluded wallets even on balance check error
         minimumRequired: MINIMUM_TOKENS,
+        isExcluded: isExcludedWallet,
         error: errorMessage,
         debug: {
           errorType: walletError instanceof Error ? walletError.constructor.name : 'Unknown',
-          errorMessage: walletError instanceof Error ? walletError.message : 'Unknown error'
+          errorMessage: walletError instanceof Error ? walletError.message : 'Unknown error',
+          walletExcluded: isExcludedWallet
         }
       });
     }

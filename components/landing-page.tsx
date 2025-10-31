@@ -5,7 +5,7 @@ import { signIn } from 'next-auth/react'
 import { Twitter, Coins, TrendingUp, Users, Zap, ArrowRight, Star, DollarSign, Copy, ExternalLink } from 'lucide-react'
 
 export function LandingPage() {
-  const contractAddress = "61QMuj4oqqNsStRx1KPWuV5uvvYWpkvUdtNHG8u6pump"
+  const contractAddress = process.env.NEXT_PUBLIC_RAIDCOIN_TOKEN_MINT || '61QMuj4oqqNsStRx1KPWuV5uvvYWpkvUdtNHG8u6pump'
   
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
@@ -113,7 +113,7 @@ export function LandingPage() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-6 text-slate-400 text-sm md:text-base px-4">
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 md:w-3 md:h-3 bg-emerald-400 rounded-full animate-pulse"></div>
-                <span>Live payouts every 30 minutes</span>
+                <span>Live payouts every 10 minutes</span>
               </div>
               <div className="flex items-center space-x-2">
                 <DollarSign className="h-4 w-4 md:h-5 md:w-5 text-emerald-400" />
@@ -172,7 +172,7 @@ export function LandingPage() {
               </div>
               <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-white">Automatic Payouts</h3>
               <p className="text-slate-300 leading-relaxed text-sm md:text-lg">
-                Receive SOL directly to your wallet every 30 minutes. No minimum threshold, no manual claims required.
+                Receive SOL directly to your wallet every 10 minutes. No minimum threshold, no manual claims required.
               </p>
             </div>
           </div>
@@ -240,7 +240,7 @@ export function LandingPage() {
               </div>
               <h4 className="text-lg md:text-xl font-bold mb-3 md:mb-4 text-white">Get Paid in SOL</h4>
               <p className="text-slate-300 leading-relaxed text-sm md:text-base px-2">
-                Receive automatic SOL payouts every 30 minutes directly to your wallet.
+                Receive automatic SOL payouts every 10 minutes directly to your wallet.
               </p>
             </div>
           </div>

@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       system: {
         solanaNetwork: process.env.SOLANA_NETWORK || 'mainnet-beta',
         creatorWallet: process.env.CREATOR_WALLET_ADDRESS,
-        payoutInterval: '10 minutes (via Vercel cron)',
+        payoutInterval: '10 minutes (automated)',
         creatorFeePercentage: process.env.CREATOR_FEE_PERCENTAGE || '5',
       },
       wallet: {

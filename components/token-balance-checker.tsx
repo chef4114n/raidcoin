@@ -15,6 +15,7 @@ export function TokenBalanceChecker({ className = '' }: TokenBalanceCheckerProps
     minimumFormatted, 
     isLoading, 
     error,
+    isExcluded,
     checkBalance 
   } = useTokenBalance();
 
@@ -73,6 +74,11 @@ export function TokenBalanceChecker({ className = '' }: TokenBalanceCheckerProps
             </p>
             <p className={`text-sm ${hasEnoughTokens ? 'text-emerald-300' : 'text-amber-300'}`}>
               Balance: {balanceFormatted} RaidCoin tokens
+              {isExcluded && (
+                <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                  Whitelisted
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -85,7 +91,7 @@ export function TokenBalanceChecker({ className = '' }: TokenBalanceCheckerProps
         </button>
       </div>
       
-      {!hasEnoughTokens && (
+      {!hasEnoughTokens && !isExcluded && (
         <div className="mt-4 pt-4 border-t border-amber-500/20">
           <p className="text-amber-200 text-sm">
             <strong>Minimum required:</strong> {minimumFormatted} RaidCoin tokens
@@ -113,6 +119,11 @@ export function TokenBalanceChecker({ className = '' }: TokenBalanceCheckerProps
           <p className="text-emerald-200 text-sm">
             ✅ You can now submit tweets and earn SOL rewards!
           </p>
+          {isExcluded && (
+            <p className="text-blue-300 text-sm mt-2">
+              🎯 Your wallet has been whitelisted and is exempt from the minimum token requirement.
+            </p>
+          )}
         </div>
       )}
     </div>

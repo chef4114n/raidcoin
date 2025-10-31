@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
-import { CheckCircle, XCircle, ExternalLink, Eye, Shield, Wallet, AlertTriangle, RefreshCw, DollarSign, Clock, Users, TrendingUp, Star } from 'lucide-react'
+import { CheckCircle, XCircle, ExternalLink, Eye, Shield, Wallet, AlertTriangle, RefreshCw, DollarSign, Clock, Users, TrendingUp, Star, Trophy, Crown, Medal, Award, Copy } from 'lucide-react'
 
 interface PendingPost {
   id: string
@@ -72,16 +72,25 @@ export function AdminPanel() {
   const [showNewPostsNotification, setShowNewPostsNotification] = useState(false)
   const [previousPostCount, setPreviousPostCount] = useState(0)
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null)
-  const [activeTab, setActiveTab] = useState<'posts' | 'payouts' | 'raiders'>('posts')
+  const [activeTab, setActiveTab] = useState<'posts' | 'payouts' | 'raiders' | 'leaderboard'>('posts')
   const [payoutStatus, setPayoutStatus] = useState<PayoutStatus | null>(null)
   const [loadingPayoutStatus, setLoadingPayoutStatus] = useState(false)
   const [triggeringPayout, setTriggeringPayout] = useState(false)
   const [raidersData, setRaidersData] = useState<any[]>([])
   const [loadingRaiders, setLoadingRaiders] = useState(false)
+  const [leaderboardData, setLeaderboardData] = useState<any[]>([])
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false)
+  const [leaderboardPage, setLeaderboardPage] = useState(1)
+  const [leaderboardPageSize] = useState(20) // Show 20 per page for top 100
 
   const showNotification = (message: string, type: 'success' | 'error') => {
     setNotification({ message, type })
     setTimeout(() => setNotification(null), 5000)
+  }
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    showNotification('Copied to clipboard!', 'success')
   }
 
   const fetchPayoutStatus = useCallback(async () => {
@@ -111,6 +120,36 @@ export function AdminPanel() {
       console.error('Error fetching raiders breakdown:', error)
     } finally {
       setLoadingRaiders(false)
+    }
+  }, [])
+
+  const fetchLeaderboard = useCallback(async () => {
+    console.log('fetchLeaderboard called')
+    setLoadingLeaderboard(true)
+    try {
+      console.log('Making API call to /api/admin/leaderboard')
+      const response = await fetch('/api/admin/leaderboard', {
+        method: 'GET',
+        credentials: 'include', // This ensures cookies are sent with the request
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-wallet': process.env.NEXT_PUBLIC_CREATOR_WALLET_ADDRESS || ''
+        },
+      })
+      console.log('Response status:', response.status)
+      if (response.ok) {
+        const result = await response.json()
+        console.log('Leaderboard API response:', result)
+        setLeaderboardData(result.leaderboard)
+        setLeaderboardPage(1) // Reset to first page when data loads
+      } else {
+        const errorData = await response.text()
+        console.error('API returned error:', response.status, errorData)
+      }
+    } catch (error) {
+      console.error('Error fetching leaderboard:', error)
+    } finally {
+      setLoadingLeaderboard(false)
     }
   }, [])
 
@@ -210,8 +249,10 @@ export function AdminPanel() {
       fetchPayoutStatus()
     } else if (activeTab === 'raiders' && adminAuth?.isAdmin) {
       fetchRaidersBreakdown()
+    } else if (activeTab === 'leaderboard' && adminAuth?.isAdmin) {
+      fetchLeaderboard()
     }
-  }, [activeTab, adminAuth, fetchPayoutStatus, fetchRaidersBreakdown])
+  }, [activeTab, adminAuth, fetchPayoutStatus, fetchRaidersBreakdown, fetchLeaderboard])
 
   const checkAdminAuth = async () => {
     setCheckingAuth(true)
@@ -410,12 +451,13 @@ export function AdminPanel() {
                   if (activeTab === 'posts') fetchPendingPosts()
                   else if (activeTab === 'payouts') fetchPayoutStatus()
                   else if (activeTab === 'raiders') fetchRaidersBreakdown()
+                  else if (activeTab === 'leaderboard') fetchLeaderboard()
                 }}
-                disabled={loading || refreshing || loadingPayoutStatus || loadingRaiders}
+                disabled={loading || refreshing || loadingPayoutStatus || loadingRaiders || loadingLeaderboard}
                 className="bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded-lg flex items-center space-x-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <RefreshCw className={`h-4 w-4 ${(refreshing || loadingPayoutStatus || loadingRaiders) ? 'animate-spin' : ''}`} />
-                <span>{(refreshing || loadingPayoutStatus || loadingRaiders) ? 'Refreshing...' : 'Refresh'}</span>
+                <RefreshCw className={`h-5 w-5 ${(refreshing || loadingPayoutStatus || loadingRaiders || loadingLeaderboard) ? 'animate-spin' : ''}`} />
+                <span>{(refreshing || loadingPayoutStatus || loadingRaiders || loadingLeaderboard) ? 'Refreshing...' : 'Refresh'}</span>
               </button>
               <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-4 py-2">
                 <div className="flex items-center text-emerald-400">
@@ -476,6 +518,20 @@ export function AdminPanel() {
                 <div className="flex items-center space-x-2">
                   <Users className="h-4 w-4" />
                   <span>Raiders Breakdown</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('leaderboard')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'leaderboard'
+                    ? 'border-indigo-500 text-indigo-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-600'
+                }`}
+              >
+                <div className="flex items-center space-x-2">
+                  <Trophy className="h-4 w-4" />
+                  <span>Top 100 Leaderboard</span>
                 </div>
               </button>
             </nav>
@@ -747,7 +803,7 @@ export function AdminPanel() {
               </div>
             )}
           </div>
-        ) : (
+        ) : activeTab === 'raiders' ? (
           // Raiders Breakdown Tab
           <div className="space-y-6">
             {loadingRaiders ? (
@@ -887,7 +943,240 @@ export function AdminPanel() {
               </div>
             )}
           </div>
-        )}
+        ) : activeTab === 'leaderboard' ? (
+          <div className="space-y-6">
+            {/* Leaderboard */}
+            {loadingLeaderboard ? (
+              <div className="bg-slate-900 border border-slate-700 rounded-xl p-6">
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+                  <span className="ml-3 text-slate-300">Loading leaderboard...</span>
+                </div>
+              </div>
+            ) : leaderboardData.length > 0 ? (
+              <div className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-700">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xl font-semibold text-slate-50">Top 100 Leaderboard</h3>
+                      <p className="text-slate-400 text-sm mt-1">Rankings based on total points earned</p>
+                    </div>
+                    
+                    {leaderboardData.length > 0 && (
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => setLeaderboardPage(1)}
+                          disabled={leaderboardPage === 1}
+                          className="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                        >
+                          Top
+                        </button>
+                        <button
+                          onClick={() => setLeaderboardPage(Math.max(1, leaderboardPage - 1))}
+                          disabled={leaderboardPage === 1}
+                          className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Previous
+                        </button>
+                        <span className="text-slate-300 text-sm">
+                          Page {leaderboardPage} of {Math.ceil(leaderboardData.length / leaderboardPageSize)}
+                        </span>
+                        <button
+                          onClick={() => setLeaderboardPage(Math.min(Math.ceil(leaderboardData.length / leaderboardPageSize), leaderboardPage + 1))}
+                          disabled={leaderboardPage >= Math.ceil(leaderboardData.length / leaderboardPageSize)}
+                          className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Next
+                        </button>
+                        <button
+                          onClick={() => setLeaderboardPage(Math.ceil(leaderboardData.length / leaderboardPageSize))}
+                          disabled={leaderboardPage >= Math.ceil(leaderboardData.length / leaderboardPageSize)}
+                          className="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                        >
+                          Last
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Top 3 Podium */}
+                {leaderboardPage === 1 && leaderboardData.length >= 3 && (
+                  <div className="px-6 py-6 bg-gradient-to-r from-slate-800 to-slate-700">
+                    <div className="flex items-end justify-center space-x-8">
+                      {/* 2nd Place */}
+                      <div className="text-center">
+                        <div className="relative">
+                          <div className="h-16 w-16 bg-gradient-to-r from-slate-400 to-slate-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <span className="text-white text-lg font-bold">
+                              {leaderboardData[1]?.username.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="absolute -top-1 -right-1 bg-slate-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">
+                            2
+                          </div>
+                        </div>
+                        <p className="text-slate-300 font-medium text-sm">{leaderboardData[1]?.username}</p>
+                        <p className="text-slate-400 text-xs">{leaderboardData[1]?.totalPoints} pts</p>
+                      </div>
+
+                      {/* 1st Place */}
+                      <div className="text-center">
+                        <div className="relative">
+                          <div className="h-20 w-20 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <span className="text-white text-xl font-bold">
+                              {leaderboardData[0]?.username.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="absolute -top-2 -right-2 bg-yellow-500 text-white text-sm font-bold w-8 h-8 rounded-full flex items-center justify-center">
+                            1
+                          </div>
+                          <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                            <Crown className="h-6 w-6 text-yellow-400" />
+                          </div>
+                        </div>
+                        <p className="text-slate-50 font-bold">{leaderboardData[0]?.username}</p>
+                        <p className="text-yellow-400 font-medium">{leaderboardData[0]?.totalPoints} pts</p>
+                      </div>
+
+                      {/* 3rd Place */}
+                      <div className="text-center">
+                        <div className="relative">
+                          <div className="h-16 w-16 bg-gradient-to-r from-amber-600 to-amber-700 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <span className="text-white text-lg font-bold">
+                              {leaderboardData[2]?.username.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="absolute -top-1 -right-1 bg-amber-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">
+                            3
+                          </div>
+                        </div>
+                        <p className="text-slate-300 font-medium text-sm">{leaderboardData[2]?.username}</p>
+                        <p className="text-slate-400 text-xs">{leaderboardData[2]?.totalPoints} pts</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Full Leaderboard Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-slate-800">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Rank</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Raider</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Wallet Address</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Posts</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Points</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">SOL Rewards</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700">
+                      {leaderboardData
+                        .slice((leaderboardPage - 1) * leaderboardPageSize, leaderboardPage * leaderboardPageSize)
+                        .map((raider, index) => {
+                          const actualRank = (leaderboardPage - 1) * leaderboardPageSize + index + 1
+                          return (
+                            <tr key={raider.id} className="hover:bg-slate-800/50">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <span className={`text-lg font-bold ${
+                                    actualRank === 1 ? 'text-yellow-400' :
+                                    actualRank === 2 ? 'text-slate-400' :
+                                    actualRank === 3 ? 'text-amber-600' :
+                                    'text-slate-300'
+                                  }`}>
+                                    #{actualRank}
+                                  </span>
+                                  {actualRank <= 3 && (
+                                    <div className="ml-2">
+                                      {actualRank === 1 && <Crown className="h-4 w-4 text-yellow-400" />}
+                                      {actualRank === 2 && <Medal className="h-4 w-4 text-slate-400" />}
+                                      {actualRank === 3 && <Award className="h-4 w-4 text-amber-600" />}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                                    actualRank === 1 ? 'bg-gradient-to-r from-yellow-400 to-yellow-500' :
+                                    actualRank === 2 ? 'bg-gradient-to-r from-slate-400 to-slate-500' :
+                                    actualRank === 3 ? 'bg-gradient-to-r from-amber-600 to-amber-700' :
+                                    'bg-gradient-to-r from-blue-500 to-purple-600'
+                                  }`}>
+                                    <span className="text-white text-sm font-medium">
+                                      {raider.username.charAt(0).toUpperCase()}
+                                    </span>
+                                  </div>
+                                  <div className="ml-3">
+                                    <p className="text-slate-50 font-medium">{raider.username}</p>
+                                    <p className="text-slate-400 text-sm">Verified raider</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                {raider.walletAddress ? (
+                                  <div className="flex items-center space-x-2">
+                                    <code className="text-slate-300 text-sm bg-slate-800 px-2 py-1 rounded">
+                                      {raider.walletAddress.slice(0, 8)}...{raider.walletAddress.slice(-4)}
+                                    </code>
+                                    <button
+                                      onClick={() => copyToClipboard(raider.walletAddress)}
+                                      className="text-slate-400 hover:text-slate-300 transition-colors"
+                                      title="Copy wallet address"
+                                    >
+                                      <Copy className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-slate-500 text-sm italic">No wallet connected</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="text-slate-50 font-medium">{raider.totalPosts}</span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`font-bold ${
+                                  actualRank === 1 ? 'text-yellow-400' :
+                                  actualRank === 2 ? 'text-slate-400' :
+                                  actualRank === 3 ? 'text-amber-600' :
+                                  'text-indigo-400'
+                                }`}>
+                                  {raider.totalPoints}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="text-emerald-400 font-bold">{raider.totalRewards} SOL</span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                                  raider.status === 'active' 
+                                    ? 'bg-emerald-900 text-emerald-300' 
+                                    : raider.status === 'inactive'
+                                    ? 'bg-yellow-900 text-yellow-300'
+                                    : 'bg-red-900 text-red-300'
+                                }`}>
+                                  {raider.status.charAt(0).toUpperCase() + raider.status.slice(1)}
+                                </span>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-slate-900 border border-slate-700 rounded-xl p-12 text-center">
+                <Trophy className="h-16 w-16 text-slate-400 mx-auto mb-6" />
+                <h3 className="text-xl font-semibold text-slate-50 mb-3">No leaderboard data available</h3>
+                <p className="text-slate-400">No raiders have earned points yet.</p>
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
     </div>
   )

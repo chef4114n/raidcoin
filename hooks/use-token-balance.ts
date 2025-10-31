@@ -9,6 +9,7 @@ interface TokenBalanceResult {
   minimumFormatted: string;
   isLoading: boolean;
   error: string | null;
+  isExcluded: boolean;
 }
 
 // Simple cache to avoid too many requests
@@ -24,6 +25,7 @@ export function useTokenBalance(): TokenBalanceResult & { checkBalance: () => Pr
   const [minimumFormatted, setMinimumFormatted] = useState('500,000');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isExcluded, setIsExcluded] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
 
   // Get wallet address from user profile
@@ -53,6 +55,7 @@ export function useTokenBalance(): TokenBalanceResult & { checkBalance: () => Pr
     if (!session?.user || !walletAddress) {
       setBalance(0);
       setHasEnoughTokens(false);
+      setIsExcluded(false);
       setError(null);
       setIsLoading(false);
       return;
@@ -68,6 +71,7 @@ export function useTokenBalance(): TokenBalanceResult & { checkBalance: () => Pr
       setMinimumRequired(data.minimumRequired);
       setBalanceFormatted(data.balanceFormatted);
       setMinimumFormatted(data.minimumFormatted);
+      setIsExcluded(data.isExcluded || false);
       setError(null);
       return;
     }
@@ -97,6 +101,7 @@ export function useTokenBalance(): TokenBalanceResult & { checkBalance: () => Pr
         setMinimumRequired(data.minimumRequired);
         setBalanceFormatted(data.balanceFormatted);
         setMinimumFormatted(data.minimumFormatted);
+        setIsExcluded(data.isExcluded || false);
         setError(null);
         
         // Cache the successful response
@@ -108,13 +113,15 @@ export function useTokenBalance(): TokenBalanceResult & { checkBalance: () => Pr
         console.error('Balance check failed:', data);
         setError(data.error || 'Failed to check token balance');
         setBalance(0);
-        setHasEnoughTokens(false);
+        setHasEnoughTokens(data.hasEnoughTokens || false); // Could still be true if excluded
+        setIsExcluded(data.isExcluded || false);
       }
     } catch (err) {
       console.error('Error checking token balance:', err);
       setError('Network error - please try again');
       setBalance(0);
       setHasEnoughTokens(false);
+      setIsExcluded(false);
     } finally {
       setIsLoading(false);
     }
@@ -131,6 +138,7 @@ export function useTokenBalance(): TokenBalanceResult & { checkBalance: () => Pr
     } else {
       setBalance(0);
       setHasEnoughTokens(false);
+      setIsExcluded(false);
       setError(null);
     }
   }, [session, walletAddress, checkBalance]);
@@ -143,6 +151,7 @@ export function useTokenBalance(): TokenBalanceResult & { checkBalance: () => Pr
     minimumFormatted,
     isLoading,
     error,
+    isExcluded,
     checkBalance,
   };
 }

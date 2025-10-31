@@ -36,20 +36,11 @@ interface Post {
   tweetCreatedAt: string
 }
 
-interface Payout {
-  id: string
-  amount: number
-  status: string
-  createdAt: string
-  txSignature?: string
-}
-
 export function Dashboard() {
   const { data: session } = useSession()
   const { connected, publicKey } = useWallet()
   const [stats, setStats] = useState<UserStats | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
-  const [payouts, setPayouts] = useState<Payout[]>([])
   const [loading, setLoading] = useState(true)
   const [walletAddress, setWalletAddress] = useState('')
   const [savedWalletAddress, setSavedWalletAddress] = useState('')
@@ -87,16 +78,14 @@ export function Dashboard() {
     }
     
     try {
-      const [statsRes, postsRes, payoutsRes, walletRes] = await Promise.all([
+      const [statsRes, postsRes, walletRes] = await Promise.all([
         fetch('/api/user/stats'),
         fetch('/api/user/posts'),
-        fetch('/api/user/payouts'),
         fetch('/api/user/wallet-status')
       ])
 
       if (statsRes.ok) setStats(await statsRes.json())
       if (postsRes.ok) setPosts(await postsRes.json())
-      if (payoutsRes.ok) setPayouts(await payoutsRes.json())
       if (walletRes.ok) {
         const walletData = await walletRes.json()
         setSavedWalletAddress(walletData.walletAddress || '')
@@ -386,46 +375,6 @@ export function Dashboard() {
               )) : (
                 <p className="text-slate-400 text-center py-12 text-lg">
                   No posts tracked yet. Start posting about $raidcoin to earn points!
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Recent Payouts */}
-          <div className="bg-slate-900 border border-slate-700 rounded-xl p-8 shadow-professional animate-slide-in">
-            <h2 className="text-2xl font-bold mb-6 text-slate-50">Recent Payouts</h2>
-            <div className="space-y-4">
-              {payouts.length > 0 ? payouts.slice(0, 5).map((payout) => (
-                <div key={payout.id} className="flex items-center justify-between p-4 bg-slate-800 border border-slate-600 rounded-lg hover:bg-slate-700 transition-colors">
-                  <div>
-                    <p className="font-semibold text-slate-50">{payout.amount.toFixed(4)} SOL</p>
-                    <p className="text-sm text-slate-400">
-                      {new Date(payout.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      payout.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                      payout.status === 'PROCESSING' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
-                      'bg-red-500/10 text-red-400 border border-red-500/20'
-                    }`}>
-                      {payout.status}
-                    </span>
-                    {payout.txSignature && (
-                      <a 
-                        href={`https://solscan.io/tx/${payout.txSignature}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block text-xs text-indigo-400 hover:text-indigo-300 mt-2 transition-colors"
-                      >
-                        View on Solscan
-                      </a>
-                    )}
-                  </div>
-                </div>
-              )) : (
-                <p className="text-slate-400 text-center py-12 text-lg">
-                  No payouts yet. Keep earning points to receive your first payout!
                 </p>
               )}
             </div>
