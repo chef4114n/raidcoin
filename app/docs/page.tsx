@@ -66,7 +66,7 @@ export default function DocsPage() {
                 The more engagement your tweets receive, the more SOL you earn.
               </p>
               <p>
-                Our platform tracks your tweets that mention $raidcoin, #raidcoin, or @raidcoin, calculates points based on engagement metrics, 
+                Our platform tracks your tweets that mention $raidcoin, #raidcoin, or @xraidcoin, calculates points based on engagement metrics, 
                 and automatically distributes SOL rewards every 10 minutes based on your contribution to the community.
               </p>
               <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3 md:p-4 mt-4 md:mt-6">
@@ -207,7 +207,7 @@ export default function DocsPage() {
                     <p className="text-xs md:text-sm text-blue-400">Hashtag</p>
                   </div>
                   <div className="bg-blue-600/20 rounded-lg p-3 md:p-4 text-center">
-                    <div className="text-xl md:text-2xl font-bold text-blue-300 mb-2">@raidcoin</div>
+                    <div className="text-xl md:text-2xl font-bold text-blue-300 mb-2">@xraidcoin</div>
                     <p className="text-xs md:text-sm text-blue-400">Mention</p>
                   </div>
                 </div>
@@ -218,7 +218,7 @@ export default function DocsPage() {
                 <ol className="space-y-3 text-slate-300 text-sm md:text-base">
                   <li className="flex items-start space-x-3">
                     <span className="bg-indigo-600 text-white rounded-full w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-xs md:text-sm font-bold mt-0.5">1</span>
-                    <span>Create a tweet that mentions $raidcoin, uses #raidcoin, or mentions @raidcoin</span>
+                    <span>Create a tweet that mentions $raidcoin, uses #raidcoin, or mentions @xraidcoin</span>
                   </li>
                   <li className="flex items-start space-x-3">
                     <span className="bg-indigo-600 text-white rounded-full w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-xs md:text-sm font-bold mt-0.5">2</span>
