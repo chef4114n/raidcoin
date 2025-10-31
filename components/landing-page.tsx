@@ -5,7 +5,7 @@ import { signIn } from 'next-auth/react'
 import { Twitter, Coins, TrendingUp, Users, Zap, ArrowRight, Star, DollarSign, Copy, ExternalLink } from 'lucide-react'
 
 export function LandingPage() {
-  const contractAddress = process.env.NEXT_PUBLIC_RAIDCOIN_TOKEN_MINT || '61QMuj4oqqNsStRx1KPWuV5uvvYWpkvUdtNHG8u6pump'
+  const contractAddress = process.env.NEXT_PUBLIC_RAIDCOIN_TOKEN_MINT!
   
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)

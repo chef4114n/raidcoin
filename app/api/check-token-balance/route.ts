@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Connection, PublicKey } from '@solana/web3.js';
 
-const RAIDCOIN_MINT = process.env.RAIDCOIN_TOKEN_MINT || '61QMuj4oqqNsStRx1KPWuV5uvvYWpkvUdtNHG8u6pump';
+const RAIDCOIN_MINT = process.env.RAIDCOIN_TOKEN_MINT!;
 const MINIMUM_TOKENS = 500000; // 500k tokens
 
 // Wallets excluded from minimum token requirement

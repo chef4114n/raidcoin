@@ -4,7 +4,7 @@ import React from 'react'
 import { Twitter, Coins, TrendingUp, Users, Zap, ArrowRight, Star, DollarSign, Copy, ExternalLink, Shield, AlertTriangle, CheckCircle } from 'lucide-react'
 
 export default function DocsPage() {
-  const contractAddress = process.env.NEXT_PUBLIC_RAIDCOIN_TOKEN_MINT
+  const contractAddress = process.env.NEXT_PUBLIC_RAIDCOIN_TOKEN_MINT!
   
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)

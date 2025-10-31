@@ -101,7 +101,7 @@ export function TokenBalanceChecker({ className = '' }: TokenBalanceCheckerProps
           </p>
           <div className="mt-3">
             <a
-              href={`https://pump.fun/coin/${process.env.NEXT_PUBLIC_RAIDCOIN_TOKEN_MINT || '61QMuj4oqqNsStRx1KPWuV5uvvYWpkvUdtNHG8u6pump'}`}
+              href={`https://pump.fun/coin/${process.env.NEXT_PUBLIC_RAIDCOIN_TOKEN_MINT!}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-4 py-2 rounded-lg transition-all duration-200 font-medium"
